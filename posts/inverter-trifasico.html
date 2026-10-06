@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi primer inverter trifásico · Nicolás Pereyra</title>
+<meta name="description" content="Un inverter trifásico para mover un motor de 2 HP desde la red monofásica: SVPWM con tercer armónico, control V/f, simulación en MATLAB y PLECS, y una placa con un módulo IPM.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css?v=2">
+<style>
+  article code { font: 0.88em var(--mono); background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; border-radius: 3px; }
+  article h3 { font: 600 19px/1.3 var(--serif); margin: 28px 0 8px; }
+  .fig.narrow img { max-width: 380px; margin: 0 auto; display: block; }
+  .fig img { background: #fdfbf7; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 15px; margin: 20px 0; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.t th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .toc { font: 14px/1.9 var(--mono); }
+  .toc a { color: var(--muted); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .next { font: 500 14px var(--mono); color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; margin-top: 36px; }
+  .eq { font: italic 500 18px/1.6 var(--serif); text-align: center; margin: 20px 0; padding: 12px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; }
+  .eq small { font: 500 12.5px var(--mono); font-style: normal; color: var(--muted); display: block; }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="../index.html">npp<span>/</span>portfolio</a>
+  <nav><a href="../index.html#proyectos" aria-current="page">proyectos</a><a href="../cv.html">cv</a></nav>
+</div></header>
+<main class="wrap"><article>
+  <p class="eyebrow">2025 · Electrónica de potencia · MATLAB · PLECS · KiCad</p>
+  <h1>Mi primer inverter trifásico: de la simulación a un motor de 2 HP</h1>
+  <p class="meta">SVPWM con tercer armónico, control V/f y un módulo IPM</p>
+
+  <p>Hasta 2025 mi electrónica de potencia eran proyectos chicos: dimmers armados con triacs y diacs. Este fue mi primer acercamiento a la electrónica de potencia con un <b>proyecto complejo</b> y un diseño nuevo, en el que había que resolver a la vez matemática de modulación, simulación, elección de un módulo de potencia y una placa que lo maneje.</p>
+  <p>El objetivo: un <b>inverter trifásico</b> capaz de mover con tranquilidad un <b>motor asíncrono de 2 HP</b> alimentado con la <b>tensión monofásica</b> de la red. El módulo de potencia soportaría más que eso, pero solo lo probé hasta 2 HP.</p>
+
+  <p class="toc">
+    <a href="#sistema">1. El sistema en una imagen</a><br>
+    <a href="#pwm">2. Cómo se fabrica una senoidal con interruptores</a><br>
+    <a href="#svpwm">3. SVPWM: pensar en vectores</a><br>
+    <a href="#tercer">4. Tercer armónico: de dónde sale el margen</a><br>
+    <a href="#vf">5. Control V/f (y el FOC que quedó sin simular)</a><br>
+    <a href="#sim">6. Simulación en MATLAB y en PLECS</a><br>
+    <a href="#hw">7. El hardware: módulo IPM y placa</a><br>
+    <a href="#aprendi">8. Qué me llevé</a>
+  </p>
+
+  <h2 id="sistema">1. El sistema en una imagen</h2>
+  <p>Un motor trifásico necesita tres tensiones senoidales desfasadas 120°, de amplitud y frecuencia ajustables. De la red monofásica salen 220 V a 50 Hz. Por eso el camino tiene tres etapas: <b>rectificar</b> a un bus de continua, <b>ondular</b> con seis interruptores (un puente trifásico) y <b>controlar</b> esos interruptores para que la salida sea la senoidal que el motor necesita.</p>
+  <figure class="fig"><img src="../assets/inv/bloques.svg" alt="Diagrama de bloques: red monofásica, rectificador y bus DC, módulo IPM, motor; el microcontrolador genera las seis señales PWM"><figcaption>Los interruptores no generan una senoidal: generan pulsos, y el motor (una carga inductiva) hace el resto. Diagrama propio.</figcaption></figure>
+  <p class="next">Lo que importa es cómo se eligen esos pulsos.</p>
+
+  <h2 id="pwm">2. Cómo se fabrica una senoidal con interruptores</h2>
+  <p>Cada rama del puente tiene un interruptor de arriba y uno de abajo que nunca conducen a la vez. Lo único que se puede hacer con una rama es conectar su salida al positivo o al negativo del bus. Para obtener una senoidal se usa <b>modulación por ancho de pulso (PWM)</b>: se compara una <b>señal de referencia senoidal</b> (la que quiero) con una <b>portadora</b> de alta frecuencia (un diente de sierra o triangular). Cuando la referencia es mayor, el interruptor de arriba conduce; cuando es menor, el de abajo.</p>
+  <p>El resultado es un tren de pulsos cuyo <b>ancho promedio sigue a la senoidal</b>: pulsos anchos cuando la referencia es alta y angostos cuando es baja. Para recuperar la senoidal se filtra con un pasa-bajos. La energía de la senoidal está en la frecuencia fundamental (50 Hz) y la del PWM está muy arriba, alrededor de la frecuencia de la portadora.</p>
+  <figure class="fig"><img src="../assets/inv/matlab-spwm-un-periodo.png" alt="Simulación en MATLAB: referencia y portadora, señal PWM y su espectro"><figcaption>Simulación en MATLAB de un período. Arriba: la referencia senoidal y el diente de sierra. Centro: el PWM resultante. Abajo: el espectro.</figcaption></figure>
+  <p>El espectro de abajo lo muestra: casi toda la energía está en la <b>portadora (20 kHz)</b> y sus múltiplos (40, 60, 80 kHz…), lejos de los 50 Hz. Un pasa-bajos deja pasar la fundamental y elimina el resto. En el sistema real el filtro es el propio motor, cuya inductancia no deja que la corriente siga a los pulsos rápidos.</p>
+  <p>Para un motor de 50 Hz, una portadora de 20 kHz significa <b>400 pulsos por ciclo</b>. Ese fue el criterio de diseño: una relación de frecuencias de al menos 400 veces. Tiene dos ventajas: los armónicos quedan muy lejos de la fundamental, y 20 kHz está por encima de lo audible.</p>
+  <p class="next">Falta decidir cómo repartir los pulsos entre las tres ramas para sacar el máximo del bus.</p>
+
+  <h2 id="svpwm">3. SVPWM: pensar en vectores</h2>
+  <p>En lugar de tratar cada fase por separado, la <b>modulación por vector espacial (SVPWM)</b> considera las tres fases juntas como un único vector giratorio. Cada rama tiene dos estados posibles, así que el puente tiene 2³ = 8 combinaciones:</p>
+  <ul>
+    <li><b>6 vectores activos</b> (V1 a V6): de módulo <code>2/3·Vdc</code> y separados 60°. Forman un hexágono.</li>
+    <li><b>2 vectores nulos</b> (V0 = 000 y V7 = 111): todas las salidas conectadas al mismo lado, sin tensión aplicada. Están en el centro.</li>
+  </ul>
+  <p>Lo que quiero aplicar al motor es un <b>vector de referencia</b> <code>Vref</code> que gira a la frecuencia de salida. En cada período de conmutación <code>Ts</code>, <code>Vref</code> se aproxima como un promedio en el tiempo de los dos vectores activos vecinos y un vector nulo:</p>
+  <div class="eq">V<sub>ref</sub> = (T<sub>1</sub>/T<sub>s</sub>)·V<sub>1</sub> + (T<sub>2</sub>/T<sub>s</sub>)·V<sub>2</sub> + (T<sub>0</sub>/T<sub>s</sub>)·V<sub>0</sub><small>T₁ + T₂ + T₀ = Tₛ</small></div>
+  <figure class="fig"><img src="../assets/inv/vectores-svpwm.svg" alt="Hexágono de vectores del inversor con el vector de referencia en el sector 1 y los círculos límite"><figcaption>Diagrama vectorial. Los tiempos T1 y T2 salen de proyectar Vref sobre los dos vectores que enmarcan su sector. Diagrama propio.</figcaption></figure>
+  <p>Con <code>α</code> el ángulo dentro del sector (0° a 60°), resolviendo la proyección:</p>
+  <div class="eq">T<sub>1</sub> = √3·T<sub>s</sub>·(|V<sub>ref</sub>|/V<sub>dc</sub>)·sen(60° − α)<br>T<sub>2</sub> = √3·T<sub>s</sub>·(|V<sub>ref</sub>|/V<sub>dc</sub>)·sen(α)<br>T<sub>0</sub> = T<sub>s</sub> − T<sub>1</sub> − T<sub>2</sub></div>
+  <p>Hay una condición obvia: <code>T₀</code> no puede ser negativo, o sea <code>T₁ + T₂ ≤ Tₛ</code>. La suma es máxima en el centro del sector (α = 30°), donde vale <code>√3·Ts·|Vref|/Vdc</code>. Imponer que no supere <code>Ts</code> da el límite:</p>
+  <div class="eq">|V<sub>ref</sub>| ≤ V<sub>dc</sub>/√3 ≈ 0,577·V<sub>dc</sub><small>el radio del círculo inscripto en el hexágono</small></div>
+  <p>Ese círculo es la zona donde el vector puede girar sin que ningún sector se quede sin tiempo. Si el vector se sale del círculo, ya no se puede sintetizar sin distorsión. En el diagrama se ve además el círculo punteado: es lo que se consigue con PWM senoidal común (<code>Vdc/2</code>). SVPWM aprovecha una porción del hexágono que la modulación senoidal deja sin usar.</p>
+  <p class="next">Falta ver cómo se obtiene esa ganancia, sin tener que trabajar con vectores.</p>
+
+  <h2 id="tercer">4. Tercer armónico: de dónde sale el margen</h2>
+  <p>El mismo resultado se puede obtener de una forma más simple, y es la que usé: <b>modulación con inyección de tercer armónico</b>, que también se puede ver como modular el neutro.</p>
+
+  <h3>La restricción</h3>
+  <p>Cada rama solo puede entregar, respecto del punto medio del bus, una tensión entre <code>−Vdc/2</code> y <code>+Vdc/2</code>. Con PWM senoidal, las tres referencias son <code>v<sub>x</sub> = V̂·sen(θ<sub>x</sub>)</code>. La mayor amplitud posible es <code>V̂ = Vdc/2</code>, con índice de modulación <code>m = V̂/(Vdc/2) = 1</code>. La tensión de línea entonces queda en:</p>
+  <div class="eq">V<sub>LL,pico</sub> = √3·V̂ = (√3/2)·V<sub>dc</sub> ≈ 0,866·V<sub>dc</sub> &nbsp;&nbsp;→&nbsp;&nbsp; V<sub>LL,rms</sub> ≈ 0,612·V<sub>dc</sub></div>
+
+  <h3>La idea</h3>
+  <p>El motor no ve las tensiones de fase respecto del bus: ve las <b>tensiones entre fases</b>, <code>v<sub>ab</sub> = v<sub>a</sub> − v<sub>b</sub></code>. Si se suma la <b>misma señal</b> a las tres referencias, esa diferencia no cambia. Y con el neutro del motor sin conectar, esa componente común no produce corriente.</p>
+  <p>Entonces se puede agregar a las tres referencias una señal común que las <b>achate</b>: la elegida es un tercer armónico, porque sen(3θ) es idéntico en las tres fases (están desfasadas 120°, y 3·120° = 360°) y por eso desaparece de las tensiones de línea:</p>
+  <div class="eq">r<sub>x</sub>(θ) = V̂·[ sen θ + (1/6)·sen 3θ ]</div>
+  <figure class="fig"><img src="../assets/inv/tercer-armonico.svg" alt="Fundamental de amplitud 1,155 que se sale del límite, tercer armónico y la suma que llega justo al límite"><figcaption>Con 1/6 de tercer armónico, la suma queda apenas dentro del límite aunque la fundamental sea 15 % más grande. Diagrama propio (calculado, no dibujado a mano).</figcaption></figure>
+
+  <h3>La cuenta</h3>
+  <p>¿Cuánto vale el máximo de <code>f(θ) = sen θ + (1/6)·sen 3θ</code>? Derivando e igualando a cero:</p>
+  <div class="eq">f′(θ) = cos θ + ½·cos 3θ = cos θ·(2cos²θ − ½) = 0 &nbsp;⇒&nbsp; cos θ = ½ &nbsp;⇒&nbsp; θ = 60°<small>f(60°) = sen 60° + (1/6)·sen 180° = √3/2 ≈ 0,866</small></div>
+  <p>El pico de la referencia con tercer armónico es <b>0,866·V̂</b> y no V̂. Para que no supere <code>Vdc/2</code>:</p>
+  <div class="eq">(√3/2)·V̂ ≤ V<sub>dc</sub>/2 &nbsp;⇒&nbsp; V̂ ≤ V<sub>dc</sub>/√3 &nbsp;⇒&nbsp; m ≤ 2/√3 ≈ 1,155</div>
+  <p>Coincide con el límite que salió del diagrama vectorial (<code>Vdc/√3</code>). Los dos caminos dan lo mismo porque el SVPWM "de libro", con los vectores nulos repartidos por igual, equivale a inyectar en las tres fases la señal común <code>−(máx + mín)/2</code>. Una forma exacta de ver el límite: la diferencia entre la mayor y la menor referencia llega como máximo a <code>√3·V̂</code> y tiene que caber en <code>Vdc</code>, o sea <code>V̂ ≤ Vdc/√3</code>.</p>
+
+  <h3>La ganancia y el límite</h3>
+  <p>La ganancia respecto de PWM senoidal es <b>2/√3 = 1,1547, o sea 15,47 % más tensión</b> con el mismo bus. En tensión de línea eficaz, sobre <code>Vdc</code>:</p>
+  <table class="t">
+    <tr><th>Modulación</th><th>Fase (pico)</th><th>Línea-línea (rms)</th><th>Índice m máx.</th></tr>
+    <tr><td>PWM senoidal</td><td>0,500·V<sub>dc</sub></td><td>0,612·V<sub>dc</sub></td><td>1</td></tr>
+    <tr><td>SVPWM / tercer armónico</td><td>0,577·V<sub>dc</sub></td><td><b>0,707·V<sub>dc</sub></b></td><td>1,155</td></tr>
+    <tr><td>Seis pasos (límite absoluto)</td><td>0,637·V<sub>dc</sub></td><td>0,780·V<sub>dc</sub></td><td>1,273</td></tr>
+  </table>
+  <p>Pasado <code>Vdc/√3</code> se entra en <b>sobremodulación</b>: la referencia se recorta, aparecen armónicos de baja frecuencia (5º, 7º…) y en el extremo el inverter conmuta una vez por ciclo por rama ("seis pasos"), que da la máxima fundamental posible, <code>2·Vdc/π</code>, pero con mucha distorsión. Para un motor conviene quedarse en el rango lineal.</p>
+
+  <h3>Por qué era necesario para este proyecto</h3>
+  <p>Rectificando la red de 220 V monofásica, el bus queda en aproximadamente <code>220·√2 ≈ 311 V</code> (caso ideal, sin carga ni caídas). Ahora, la tensión de línea eficaz que se puede entregar:</p>
+  <table class="t">
+    <tr><th>Con V<sub>dc</sub> ≈ 311 V</th><th>V<sub>LL,rms</sub> máxima</th></tr>
+    <tr><td>PWM senoidal (0,612·V<sub>dc</sub>)</td><td>≈ 190 V</td></tr>
+    <tr><td><b>SVPWM / tercer armónico</b> (0,707·V<sub>dc</sub>)</td><td><b>≈ 220 V</b></td></tr>
+  </table>
+  <p>Con modulación senoidal común no se llega a los 220 V que el motor pide. Con tercer armónico se llega justo, y en la práctica un poco menos por el rizado del bus, la caída en los IGBT y el tiempo muerto. Esa es la razón de haber usado esta técnica: es la que permite alimentar un motor de 220 V trifásico desde una red monofásica de 220 V sin un elevador de tensión.</p>
+  <p class="next">Hasta acá, cómo se genera la tensión. Falta ver cómo se la lleva a cada frecuencia.</p>
+
+  <h2 id="vf">5. Control V/f (y el FOC que quedó sin simular)</h2>
+  <p>Un motor de inducción necesita que el flujo en el entrehierro se mantenga constante, y ese flujo es aproximadamente proporcional a <b>tensión sobre frecuencia</b>. Si se baja la frecuencia para ir despacio sin bajar la tensión, el motor se satura y se calienta. El <b>control escalar V/f</b> resuelve esto de la forma más simple: al cambiar la frecuencia se cambia la tensión en proporción, sin medir corriente ni posición.</p>
+  <p>En mi caso, la referencia arranca desde <b>20 V a 1 Hz</b> y sube <b>linealmente</b>, tanto en índice de modulación como en frecuencia, hasta <b>220 V eficaces a 50 Hz</b>. La relación pura sería 220/50 = 4,4 V/Hz, que a 1 Hz da solo 4,4 V. Arrancar en 20 V equivale a un <b>refuerzo (boost) de tensión a baja frecuencia</b>: a frecuencias bajas la caída en la resistencia del estator se vuelve importante frente a la tensión aplicada y hay que compensarla para que el motor arranque con par.</p>
+  <div class="eq">V(f) = 20 V + (220 V − 20 V)/(50 Hz − 1 Hz) · (f − 1 Hz) &nbsp;≈ &nbsp;20 V + 4,08 V/Hz · (f − 1 Hz)</div>
+  <h3>FOC</h3>
+  <p>Además del V/f, elaboré un control <b>FOC</b> (<i>Field Oriented Control</i>), que <b>no llegó a simularse</b>. La diferencia es que V/f es de lazo abierto y FOC mide las corrientes, las transforma a un sistema de ejes que gira con el flujo (transformadas de Clarke y Park) y controla por separado la componente que produce flujo y la que produce par. Da mejor respuesta y precisión, a cambio de sensores, más cálculo y una estimación del flujo del rotor.</p>
+
+  <h2 id="sim">6. Simulación en MATLAB y en PLECS</h2>
+  <p>Antes de armar nada simulé el sistema en dos herramientas, cada una para algo distinto: <b>MATLAB</b> para la modulación (qué pulsos genero) y <b>PLECS</b> para el circuito de potencia (qué hace con esos pulsos un puente con IGBT).</p>
+  <h3>MATLAB: la modulación</h3>
+  <figure class="fig"><img src="../assets/inv/matlab-neutro-modulado.png" alt="Referencias de las tres fases con neutro modulado y tensiones línea-línea con tercer armónico durante la rampa de arranque"><figcaption>Arriba: la portadora y las tres referencias con neutro modulado, creciendo durante el arranque. Abajo: las tensiones línea-línea.</figcaption></figure>
+  <p>El gráfico de arriba muestra las referencias de las tres fases como ciclo de trabajo (0 a 1), creciendo durante 1 segundo hasta su valor final, con la frecuencia también en aumento (la rampa V/f). Se aprecia el "achatamiento" del tercer armónico: no llegan a 0 ni 1 como lo harían con modulación senoidal pura. Abajo están las tensiones de línea, que <b>siguen siendo senoidales</b> aunque las referencias no lo sean. Si la escala está normalizada con un bus de 2, el máximo teórico de línea es 2 y la simulación llega a alrededor de 1,9, cerca del límite.</p>
+  <figure class="fig"><img src="../assets/inv/matlab-pwm-filtrado.png" alt="PWM línea-línea unipolar y señales de fase filtradas con un pasa-bajos de 60 Hz"><figcaption>Arriba: PWM línea-línea unipolar. Abajo: las fases filtradas (pasa-bajos a 60 Hz) recuperan la senoidal.</figcaption></figure>
+  <p>La tensión línea-línea de un puente de dos niveles toma tres valores (+Vdc, 0 y −Vdc), por eso el gráfico de arriba se llama <b>unipolar</b>. Al filtrar con un pasa-bajos de 60 Hz, que deja pasar la fundamental y elimina el resto, se recupera la senoidal creciente de las fases.</p>
+
+  <h3>PLECS: el circuito</h3>
+  <figure class="fig"><img src="../assets/inv/plecs-inversor.webp" alt="Modelo del inversor trifásico en PLECS con las tensiones de línea, cargas y calculador de pérdidas"><figcaption>Modelo en PLECS: puente con IGBT, bus dividido en dos capacitores, carga trifásica, medición de tensiones y corriente, y calculador de pérdidas.</figcaption></figure>
+  <p>El modelo tiene el puente de IGBT con su generador de PWM complementario, el bus de continua con dos capacitores en serie, una carga trifásica resistiva y los instrumentos. A la izquierda se ven las tres tensiones de línea y la corriente, con senoidales limpias. El bloque <b>Switch Loss Calculator</b> estima las pérdidas de los IGBT, y las separa en conducción y conmutación:</p>
+  <table class="t">
+    <tr><th>Pérdida</th><th>Valor del bloque</th></tr>
+    <tr><td>Conducción</td><td>0,3323</td></tr>
+    <tr><td>Encendido (turn-on)</td><td>0,3221</td></tr>
+    <tr><td>Apagado (turn-off)</td><td>0,3031</td></tr>
+    <tr><td>Conmutación (suma)</td><td>0,6252</td></tr>
+    <tr><td><b>Total</b></td><td><b>0,9575</b></td></tr>
+  </table>
+  <p>La conmutación pesa casi el doble que la conducción. Es lo que uno espera con una portadora de 20 kHz: cada conmutación cuesta energía y hay 20 mil por segundo. Es también el motivo por el que no conviene subir la frecuencia sin necesidad.</p>
+
+  <h2 id="hw">7. El hardware: módulo IPM y placa</h2>
+  <h3>El módulo IPM</h3>
+  <p>El puente lo arma un <b>módulo IPM</b> (<i>Intelligent Power Module</i>), el <b>IKCM30F60GA</b> de Infineon. Un IPM integra en un solo encapsulado los seis IGBT con sus diodos, los <b>drivers de compuerta</b> y una serie de protecciones. Por su nomenclatura es un módulo de 600 V y 30 A.</p>
+  <figure class="fig"><img src="../assets/inv/ikcm30f60ga.png" alt="Diagrama de bloques y patas del módulo IKCM30F60GA de Infineon"><figcaption>Diagrama interno del IKCM30F60GA.</figcaption></figure>
+  <p>En el diagrama se ve qué simplifica el diseño:</p>
+  <ul>
+    <li><b>Entradas lógicas</b> <code>HIN(U,V,W)</code> y <code>LIN(U,V,W)</code>: las seis señales PWM se conectan directo desde el microcontrolador, sin driver externo.</li>
+    <li><b>Bootstrap integrado</b> (<code>VB</code>, <code>VS</code> y los diodos con <code>RBS</code>): alimenta los drivers de los IGBT de arriba sin una fuente aislada por cada uno.</li>
+    <li><b>Protecciones:</b> entrada <code>ITRIP</code> para cortar por sobrecorriente, salida <code>VFO</code> para avisar la falla y un termistor para la temperatura.</li>
+    <li><b>Terminales <code>NU</code>, <code>NV</code> y <code>NW</code> separados</b>: los emisores de los IGBT de abajo salen por separado, lo que permite medir la corriente de cada rama con una resistencia shunt.</li>
+    <li><b>Potencia:</b> <code>P</code> (bus positivo) y las salidas <code>U</code>, <code>V</code>, <code>W</code> que van al motor.</li>
+  </ul>
+
+  <h3>La placa</h3>
+  <p>Como el IPM trae los drivers y las protecciones adentro, el <b>diseño de la placa fue simple</b>. La placa la hice en KiCad, de <b>150 × 100 mm y dos capas</b>.</p>
+  <figure class="fig"><img src="../assets/inv/pcb-kicad.png" alt="Diseño de la placa en KiCad de 150 por 100 milímetros con dos capas"><figcaption>La placa en KiCad. Rojo: capa superior. Azul: capa inferior.</figcaption></figure>
+  <p>Del lado de red aparecen los fusibles (F1 y F2), un relé (K1) y diodos, además de un módulo de fuente (PS1). Del lado de control está el microcontrolador <b>STM32F103C8T6</b>, que genera el PWM, y el resto de la placa aloja el módulo de potencia con sus conectores. El bus de continua trabaja con tensiones peligrosas (cerca de 311 V), por lo que la separación entre las pistas de potencia y las de señal es una decisión de diseño que importa en una placa como esta.</p>
+
+  <h3>El equipo armado</h3>
+  <p>Este es el inverter terminado, dentro de un gabinete impreso en 3D (se ven las capas).</p>
+  <figure class="fig narrow"><img src="../assets/inv/inverter-armado.webp" alt="Inverter armado dentro de un gabinete blanco impreso en 3D, con ventilador, entrada de alimentación, luces indicadoras y cables"><figcaption>El inverter de 2 HP armado.</figcaption></figure>
+  <p>En la foto se distinguen un <b>ventilador</b> y <b>rejillas de ventilación</b> para sacar el calor de los semiconductores, la <b>entrada de alimentación</b> (el conector negro), <b>luces indicadoras</b> y un pulsador en la tapa, y los cables que salen por arriba con sus terminales. Con los IGBT disipando las pérdidas que se vieron en la simulación, la ventilación forzada no es un detalle.</p>
+
+  <h2 id="aprendi">8. Qué me llevé</h2>
+  <ul>
+    <li><b>Simular antes de armar</b> ahorra mucho: la modulación y las pérdidas se resolvieron en MATLAB y PLECS antes de soldar nada.</li>
+    <li><b>La matemática decide el diseño.</b> Saber de dónde sale el factor 2/√3 fue lo que mostró que con 220 V monofásicos solo alcanza si se usa tercer armónico.</li>
+    <li><b>Un módulo integrado cambia el problema.</b> El IPM movió la complejidad de la placa hacia la elección y la comprensión del módulo.</li>
+    <li><b>Pendiente:</b> el FOC, que quedó diseñado pero sin simular.</li>
+  </ul>
+
+  <div class="pager"><a href="../index.html#proyectos">← Todos los proyectos</a><a href="sistema-operativo.html">Siguiente: un sistema operativo desde cero →</a></div>
+</article></main>
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span></div></footer>
+</body>
+</html>

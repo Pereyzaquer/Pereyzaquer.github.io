@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" font-family="system-ui, Segoe UI, Arial, sans-serif" font-size="13">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1d1b18"/></marker><marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#b4441c"/></marker><marker id="c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#3d5a80"/></marker></defs>
+<rect width="760" height="440" rx="10" fill="#fdfbf7" stroke="#d9d3c5"/>
+<text x="380" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1d1b18">Las cuatro variantes de jamming</text>
+<rect x="20" y="48" width="340" height="170" rx="8" fill="#fdfbf7" stroke="#d9d3c5"/>
+<text x="34" y="70" font-weight="600" fill="#1d1b18">Banda ancha (barrage)</text>
+<text x="34" y="88" font-size="11.5" fill="#6b665d">Reparte la potencia sobre toda la banda · gasta mucha potencia</text>
+<line x1="40" y1="198" x2="340" y2="198" stroke="#1d1b18" stroke-width="1.2"/>
+<line x1="40" y1="198" x2="40" y2="103" stroke="#1d1b18" stroke-width="1.2"/>
+<rect x="58" y="164" width="270" height="34" fill="#f0dcd2" stroke="#b4441c" stroke-width="1.6"/>
+<text x="44" y="112" font-size="11" fill="#6b665d">potencia</text><text x="338" y="212" text-anchor="end" font-size="11" fill="#6b665d">frecuencia →</text>
+<rect x="400" y="48" width="340" height="170" rx="8" fill="#fdfbf7" stroke="#d9d3c5"/>
+<text x="414" y="70" font-weight="600" fill="#1d1b18">Banda angosta (spot / CW)</text>
+<text x="414" y="88" font-size="11.5" fill="#6b665d">Concentra todo en una frecuencia · poca potencia</text>
+<line x1="420" y1="198" x2="720" y2="198" stroke="#1d1b18" stroke-width="1.2"/>
+<line x1="420" y1="198" x2="420" y2="103" stroke="#1d1b18" stroke-width="1.2"/>
+<rect x="560" y="113" width="16" height="85" fill="#f0dcd2" stroke="#b4441c" stroke-width="1.6"/>
+<text x="718" y="212" text-anchor="end" font-size="11" fill="#6b665d">frecuencia →</text>
+<rect x="20" y="238" width="340" height="170" rx="8" fill="#fdfbf7" stroke="#d9d3c5"/>
+<text x="34" y="260" font-weight="600" fill="#1d1b18">Barrido (chirp / swept)</text>
+<text x="34" y="278" font-size="11.5" fill="#6b665d">Una portadora recorre la banda una y otra vez · la más común</text>
+<line x1="40" y1="388" x2="340" y2="388" stroke="#1d1b18" stroke-width="1.2"/>
+<line x1="40" y1="388" x2="40" y2="293" stroke="#1d1b18" stroke-width="1.2"/>
+<line x1="60" y1="378" x2="140" y2="308" stroke="#b4441c" stroke-width="2.4"/><line x1="140" y1="308" x2="140" y2="378" stroke="#b4441c" stroke-width="1" stroke-dasharray="3 3"/><line x1="150" y1="378" x2="230" y2="308" stroke="#b4441c" stroke-width="2.4"/><line x1="230" y1="308" x2="230" y2="378" stroke="#b4441c" stroke-width="1" stroke-dasharray="3 3"/><line x1="240" y1="378" x2="320" y2="308" stroke="#b4441c" stroke-width="2.4"/><line x1="320" y1="308" x2="320" y2="378" stroke="#b4441c" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="44" y="302" font-size="11" fill="#6b665d">frecuencia ↑</text><text x="338" y="402" text-anchor="end" font-size="11" fill="#6b665d">tiempo →</text>
+<rect x="400" y="238" width="340" height="170" rx="8" fill="#fdfbf7" stroke="#d9d3c5"/>
+<text x="414" y="260" font-weight="600" fill="#1d1b18">Pulsado</text>
+<text x="414" y="278" font-size="11.5" fill="#6b665d">Ráfagas fuertes y cortas para saturar el AGC del receptor</text>
+<line x1="420" y1="388" x2="720" y2="388" stroke="#1d1b18" stroke-width="1.2"/>
+<line x1="420" y1="388" x2="420" y2="293" stroke="#1d1b18" stroke-width="1.2"/>
+<rect x="446" y="308" width="14" height="80" fill="#f0dcd2" stroke="#b4441c" stroke-width="1.6"/>
+<rect x="514" y="308" width="14" height="80" fill="#f0dcd2" stroke="#b4441c" stroke-width="1.6"/>
+<rect x="582" y="308" width="14" height="80" fill="#f0dcd2" stroke="#b4441c" stroke-width="1.6"/>
+<rect x="650" y="308" width="14" height="80" fill="#f0dcd2" stroke="#b4441c" stroke-width="1.6"/>
+<text x="424" y="302" font-size="11" fill="#6b665d">potencia ↑</text><text x="718" y="402" text-anchor="end" font-size="11" fill="#6b665d">tiempo →</text>
+<text x="380" y="428" text-anchor="middle" font-size="11.5" fill="#6b665d">Esquemas conceptuales, sin escalas reales.</text>
+</svg>

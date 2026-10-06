@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nicolás Pereyra Pigerl · Portfolio</title>
+<meta name="description" content="Estudiante de Ingeniería Electrónica (UTN). Electrónica de potencia, sistemas embebidos y análisis de causa raíz. Proyectos explicados como blog.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html">npp<span>/</span>portfolio</a>
+    <nav>
+      <a href="#proyectos">proyectos</a>
+      <a href="#camino">camino</a>
+      <a href="cv.html">cv</a>
+      <a href="#contacto">contacto</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <p class="eyebrow">Ingeniería Electrónica · UTN FRBA</p>
+    <h1>Construyo electrónica de potencia y sistemas embebidos, y escribo lo que aprendo en el camino.</h1>
+    <p class="lead">Soy Nicolás. Empecé arreglando computadoras en 2019 y hoy diseño el inverter de tracción del auto de UTN Motorsport (Formula SAE). Acá cuento cómo fui resolviendo cada proyecto: qué falló, qué cambié y por qué.</p>
+    <div class="links">
+      <a class="btn primary" href="cv.html">Ver CV</a>
+      <a class="btn" href="https://github.com/Pereyzaquer">GitHub</a>
+      <a class="btn" href="https://www.linkedin.com/in/nicol%C3%A1s-pereyra-173160231/">LinkedIn</a>
+    </div>
+  </div>
+
+  <div class="wrap" id="proyectos">
+    <section>
+      <h2>Proyectos y notas</h2>
+      <ul class="posts">
+        <li><a class="row" href="posts/peltier.html">
+          <span class="year">2020</span>
+          <div><h3>Una heladera Peltier con piezas de PC viejas</h3>
+          <p>Mi primer proyecto con Arduino: estudiar el efecto Peltier y regular la temperatura con realimentación.</p>
+          <div class="tags"><span class="tag">Arduino</span><span class="tag">Control</span><span class="tag">Peltier</span></div></div>
+        </a></li>
+        <li><a class="row" href="posts/cortina.html">
+          <span class="year">2021</span>
+          <div><h3>IoT Cortina DIY</h3>
+          <p>Motor de limpiaparabrisas, ESP8266 y un imán: cómo pasé de lazo abierto a un encoder sin saber que lo era.</p>
+          <div class="tags"><span class="tag">ESP8266</span><span class="tag">Sensor Hall</span><span class="tag">CAD 3D</span></div></div>
+        </a></li>
+        <li><a class="row" href="posts/auto-qt.html">
+          <span class="year">2021</span>
+          <div><h3>Auto autónomo con integración Qt</h3>
+          <p>Control remoto por WiFi desde una app en Qt y modo autónomo con ultrasonido, sobre un LPC845.</p>
+          <div class="tags"><span class="tag">LPC845</span><span class="tag">Qt</span><span class="tag">WiFi / UART</span></div></div>
+        </a></li>
+        <li><a class="row" href="posts/vl53l1x.html">
+          <span class="year">2022</span>
+          <div><h3>Calibración del sensor VL53L1X según su reflectancia</h3>
+          <p>Caracterización del VL53L1X según la reflectancia del material.</p>
+          <div class="tags"><span class="tag">Medidas</span><span class="tag">Óptica IR</span></div></div>
+        </a></li>
+        <li><a class="row" href="posts/arcos.html">
+          <span class="year">2022</span>
+          <div><h3>Arcos impresos en 3D para un torneo de arquería</h3>
+          <p>Compuestos modificados para que no se rompan y un recurvo olímpico de diseño propio, escala de un arco comercial.</p>
+          <div class="tags"><span class="tag">Impresión 3D</span><span class="tag">Diseño</span></div></div>
+        </a></li>
+        <li><a class="row" href="posts/inverter-trifasico.html">
+          <span class="year">2025</span>
+          <div><h3>Mi primer inverter trifásico: de la simulación a un motor de 2 HP</h3>
+          <p>SVPWM con tercer armónico, control V/f, simulación en MATLAB y PLECS, y una placa con un módulo IPM.</p>
+          <div class="tags"><span class="tag">Electrónica de potencia</span><span class="tag">SVPWM</span><span class="tag">MATLAB</span><span class="tag">PLECS</span></div></div>
+        </a></li>
+        <li><a class="row" href="posts/radar-antena.html">
+          <span class="year">2025</span>
+          <div><h3>Una antena direccional para un radar tipo Coffee Can</h3>
+          <p>Radar FMCW de ~1 GHz y el diseño en Ansys de una bowtie con plano reflector y metamaterial, que duplicó el ancho de banda y subió la ganancia.</p>
+          <div class="tags"><span class="tag">Radar FMCW</span><span class="tag">Antenas</span><span class="tag">Ansys</span></div></div>
+        </a></li>
+        <li><a class="row" href="posts/sistema-operativo.html">
+          <span class="year">2025</span>
+          <div><h3>Un sistema operativo desde cero: chocarse con la pared de la memoria</h3>
+          <p>Memoria física y virtual, paginación, modos de privilegio ARM y cambio de contexto en un Cortex-A8, en C y Assembly.</p>
+          <div class="tags"><span class="tag">ARM</span><span class="tag">Assembly</span><span class="tag">MMU</span><span class="tag">Scheduler</span></div></div>
+        </a></li>
+        <li><a class="row" href="posts/mpu6050-beaglebone.html">
+          <span class="year">2025</span>
+          <div><h3>Desarrollo de drivers para Linux</h3>
+          <p>Driver de kernel, Device Tree Overlay y servidor TCP en una BeagleBone Black. Cómo Linux ve todo como un archivo.</p>
+          <div class="tags"><span class="tag">Linux</span><span class="tag">Driver de kernel</span><span class="tag">I²C</span><span class="tag">BeagleBone</span></div></div>
+        </a></li>
+        <li><a class="row" href="posts/eamta-implantables.html">
+          <span class="year">2026</span>
+          <div><h3>Dispositivos implantables: lo que aprendí sobre diseñar un marcapasos</h3>
+          <p>Apuntes del curso de EAMTA en Tucumán: señales de microvolts, estimulación con carga neutra, baterías y alta tensión en un chip.</p>
+          <div class="tags"><span class="tag">Biomédica</span><span class="tag">ASIC</span><span class="tag">Marcapasos</span></div></div>
+        </a></li>
+        <li><a class="row" href="posts/pid-motor-ecu.html">
+          <span class="year">2026</span>
+          <div><h3>Un PID para el ventilador de un radiador</h3>
+          <p>Lazo cerrado de velocidad: sensor NTC, filtro, etapa de potencia, simulación, laboratorio y un rediseño con un driver automotriz.</p>
+          <div class="tags"><span class="tag">Control PID</span><span class="tag">Automotor</span><span class="tag">Simulink</span><span class="tag">LTspice</span></div></div>
+        </a></li>
+        <li><a class="row" href="posts/guerra-electronica-uav.html">
+          <span class="year">2026</span>
+          <div><h3>Guerra electrónica en drones: cómo se tapa y se engaña al GPS</h3>
+          <p>Jamming y spoofing de señales GNSS, cómo se defienden los UAV, qué dice la normativa y qué sistemas existen.</p>
+          <div class="tags"><span class="tag">GNSS</span><span class="tag">UAV</span><span class="tag">Seguridad aérea</span></div></div>
+        </a></li>
+        <li><a class="row" href="posts/fusibles-fsae.html">
+          <span class="year">2026</span>
+          <div><h3>Fusibles a medida para el pack de baterías de FSAE</h3>
+          <p>Por qué cada celda necesita su fusible, qué límites impone el reglamento (entre 75 y 90 A) y la idea general de cómo lo simulo en Ansys. Proyecto en curso; sin datos específicos por decisión del equipo.</p>
+          <div class="tags"><span class="tag">Baterías</span><span class="tag">Ansys</span><span class="tag">Ni200</span><span class="tag">UTN Motorsport</span></div></div>
+        </a></li>
+        <li><a class="row" href="posts/microfono-usb.html">
+          <span class="year">2026</span>
+          <div><h3>Un micrófono USB DIY con Raspberry Pi Pico 2</h3>
+          <p>AD620, conversor PCM1808 y TinyUSB para un micrófono plug and play, calibrado con Audacity. Inspirado en un video de DIY Perks.</p>
+          <div class="tags"><span class="tag">Audio</span><span class="tag">Raspberry Pi Pico 2</span><span class="tag">USB</span><span class="tag">I²S</span></div></div>
+        </a></li>
+      </ul>
+
+      <h2 style="margin-top:48px">En preparación</h2>
+      <ul class="posts soon">
+        <li><div class="row"><span class="year">2026</span><div><h3>Inverter de tracción para Formula SAE <span class="badge">próximamente</span></h3><p>~300 kW con IGBT Infineon FS900. Hoy en fabricación de PCB. Por decisión del equipo no dejo información específica del diseño; cuento la idea general y las decisiones.</p></div></div></li>
+        <li><div class="row"><span class="year">2026</span><div><h3>DES: Deuda Entre amigoS <span class="badge">próximamente</span></h3><p>App en Dart para llevar las cuentas entre amigos.</p></div></div></li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="wrap" id="camino">
+    <section>
+      <h2>Camino</h2>
+      <ul class="timeline">
+        <li><span class="y">2019</span><p>Curso de Armado y Reparación de PC (UTN). Empiezo a arreglar equipos por mi cuenta.</p></li>
+        <li><span class="y">2020</span><p><b>Empiezo Ingeniería Electrónica en la UTN.</b> Primer Arduino, primeros programas en C, C++ y Java, y primeras comunicaciones (pipes, semáforos, TCP, UDP). Onshape y KiCad.</p></li>
+        <li><span class="y">2021</span><p>Cortina automática, auto con LPC845 (Informática 2, seleccionado para presentarlo).</p></li>
+        <li><span class="y">2022</span><p>Caracterización del VL53L1X. Primeros sistemas digitales en Verilog. Arcos impresos en 3D.</p></li>
+        <li><span class="y">2023</span><p>Amplificador de audio de 10 W. Dimensionamiento eléctrico de una planta. PCBs para un producto comercial.</p></li>
+        <li><span class="y">2024</span><p>Utah (EE. UU.): trabajo como operario para Vail Resorts, en las góndolas Tombstone y Red Pine; aprendí distribución eléctrica y lectura de planos junto a los mecánicos.</p></li>
+        <li><span class="y">2025</span><p>Inverter trifásico V/f, SO propio, Linux en BeagleBone, antena de radar. Me sumo a <b>UTN Motorsport</b> y trabajo como técnico de laboratorio en el <b>ITBA</b>.</p></li>
+        <li><span class="y">2026</span><p>Responsable de Electrónica en UTN Motorsport, inverter de ~300 kW, app DES. Mejora del sistema de gestión de materiales del pañol del ITBA. En marzo, curso de dispositivos implantables en la <a href="posts/eamta-implantables.html">EAMTA 2026</a> (Universidad Nacional de Tucumán), con el Dr. Ing. Joel Gak (Uruguay), enfocado en el diseño de marcapasos.</p></li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="wrap" id="contacto">
+    <section>
+      <h2>Contacto</h2>
+      <p>Escribime a <a href="mailto:nico.pp02@gmail.com">nico.pp02@gmail.com</a>. También estoy en <a href="https://www.linkedin.com/in/nicol%C3%A1s-pereyra-173160231/">LinkedIn</a> y <a href="https://github.com/Pereyzaquer">GitHub</a>.</p>
+    </section>
+  </div>
+</main>
+
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span><span>Buenos Aires, Argentina</span></div></footer>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guerra electrónica en drones · Nicolás Pereyra</title>
+<meta name="description" content="Cómo se interfiere y se engaña al GPS de un dron: jamming, spoofing, defensas, normativa y sistemas reales.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css?v=2">
+<style>
+  article h3 { font: 600 19px/1.3 var(--serif); margin: 28px 0 8px; }
+  .fig img { background: #fdfbf7; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 15px; margin: 20px 0; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.t th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  article code { font: 0.88em var(--mono); background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; border-radius: 3px; }
+  .toc { font: 14px/1.9 var(--mono); }
+  .toc a { color: var(--muted); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .refs { font-size: 14px; color: var(--muted); }
+  .refs li { margin-bottom: 4px; word-break: break-word; }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="../index.html">npp<span>/</span>portfolio</a>
+  <nav><a href="../index.html#proyectos" aria-current="page">proyectos</a><a href="../cv.html">cv</a></nav>
+</div></header>
+<main class="wrap"><article>
+  <p class="eyebrow">2026 · Seguridad aérea · GNSS · UAV</p>
+  <h1>Guerra electrónica en drones: cómo se tapa y se engaña al GPS</h1>
+  <p class="meta">Informe hecho junto con Ramiro Palomeque (UTN FRBA)</p>
+
+  <p>Este año me metí en un tema que me gustó mucho: la <b>seguridad aérea</b>. Estudié las normativas, cómo funcionan las aeronaves y qué las puede hacer fallar. Dentro de todo eso, lo que más me atrapó fue la <b>guerra electrónica aplicada a los drones</b>, y en particular dos ataques sobre las señales de navegación satelital: el <b>jamming</b> y el <b>spoofing</b>. Con Ramiro Palomeque armamos un informe, y esta es la versión resumida.</p>
+
+  <p class="toc">
+    <a href="#idea">1. La idea central</a><br>
+    <a href="#senal">2. Una señal que llega más baja que el ruido</a><br>
+    <a href="#jamming">3. Jamming: tapar la señal</a><br>
+    <a href="#spoofing">4. Spoofing: reemplazar la señal</a><br>
+    <a href="#defensas">5. Cómo se defienden</a><br>
+    <a href="#ley">6. Qué dice la ley</a><br>
+    <a href="#sistemas">7. Lo que existe hoy</a><br>
+    <a href="#cierre">8. Qué me llevé</a>
+  </p>
+
+  <h2 id="idea">1. La idea central</h2>
+  <p>Casi todo dron moderno depende del <b>GNSS</b> (el nombre general de los sistemas de navegación satelital: GPS de EE. UU., GLONASS de Rusia, Galileo de la Unión Europea y BeiDou de China) para saber dónde está. El controlador de vuelo funde esos datos con los de la IMU, el barómetro y el magnetómetro, normalmente con un filtro de Kalman, y de ahí salen funciones como mantener la posición, seguir un recorrido o volver al punto de despegue. El GNSS también corrige la deriva de la navegación inercial, que sola se va acumulando error.</p>
+  <p>Esa dependencia es a la vez su gran fortaleza y su punto débil. Hay dos maneras de atacarla:</p>
+  <figure class="fig"><img src="../assets/uav/jamming-vs-spoofing.svg" alt="Jamming: ruido que tapa las señales de los satélites. Spoofing: señales falsas que generan una posición falsa"><figcaption>Jamming y spoofing. Diagrama propio.</figcaption></figure>
+  <p>El jamming es evidente: el dron se queda sin GPS y lo sabe. El spoofing es más insidioso, porque el receptor <b>sigue entregando una posición aparentemente válida</b>, pero falsa. En un jamming se pierde <i>disponibilidad</i>; en un spoofing se compromete la <i>integridad</i> de la información.</p>
+
+  <h2 id="senal">2. Una señal que llega más baja que el ruido</h2>
+  <p>La clave de todo está en que la señal de un satélite llega a la Tierra <b>extremadamente débil</b>: unos <b>−155 a −160 dBW</b>, por debajo del ruido térmico de fondo. Si el receptor logra rescatarla es porque usa <b>espectro ensanchado</b>: cada satélite transmite un código pseudoaleatorio (PRN) conocido, y el receptor lo correlaciona con una réplica local. Eso concentra la energía de la señal útil y dispersa cualquier interferencia, y da una <b>ganancia de procesamiento de unos 43 dB</b> en el código civil C/A del GPS.</p>
+  <p>Como un satélite está a unos 20.000 km, una señal tan tenue se vence con un transmisor chico y cercano. De ahí que ambos ataques sean posibles con equipos accesibles. Para que el receptor calcule su posición necesita ver <b>al menos cuatro satélites</b>: tres incógnitas espaciales y una cuarta para sincronizar su reloj.</p>
+
+  <h2 id="jamming">3. Jamming: tapar la señal</h2>
+  <p>El jamming consiste en inyectar energía en la banda GNSS (la banda L, entre 1 y 2 GHz, con GPS L1 en 1575,42 MHz) hasta que la relación señal-ruido del receptor cae por debajo del mínimo para seguir a los satélites. Los lazos de seguimiento pierden el enganche y el receptor deja de calcular posición.</p>
+  <figure class="fig"><img src="../assets/uav/variantes-jamming.svg" alt="Cuatro variantes de jamming: banda ancha, banda angosta, barrido y pulsado"><figcaption>Las cuatro variantes. Diagrama propio.</figcaption></figure>
+  <table class="t">
+    <tr><th>Variante</th><th>Cómo es</th><th>Qué la frena</th></tr>
+    <tr><td><b>Banda ancha</b> (barrage)</td><td>Ruido sobre toda la banda. Gasta mucha potencia. Es el jammer de "fuerza bruta".</td><td>Antena CRPA</td></tr>
+    <tr><td><b>Banda angosta</b> (spot / CW)</td><td>Toda la potencia en una frecuencia. Muy eficiente.</td><td>Filtros de muesca adaptativos</td></tr>
+    <tr><td><b>Barrido</b> (chirp)</td><td>Una portadora que recorre la banda repetidamente. Es la más común en los jammers baratos del mercado negro.</td><td>Excisión en tiempo y frecuencia, CRPA</td></tr>
+    <tr><td><b>Pulsado</b></td><td>Ráfagas fuertes y cortas, para saturar el control automático de ganancia (AGC) del receptor.</td><td>Blanking (recorte temporal)</td></tr>
+  </table>
+  <p>Lo que le pasa al dron: usa la navegación inercial para seguir un rato, pero su precisión decae porque los errores se acumulan. Por eso los drones modernos tienen procedimientos ante la pérdida de GPS: mantener posición con otros sensores, volver a una zona segura o aterrizar. Los más avanzados navegan con <b>odometría visual</b> (estimar el movimiento mirando cómo se mueven los píxeles entre imágenes) o <b>SLAM</b> (construir un mapa y ubicarse dentro de él al mismo tiempo).</p>
+
+  <h2 id="spoofing">4. Spoofing: reemplazar la señal</h2>
+  <p>El spoofing no tapa la señal: la <b>sustituye</b>. El atacante genera señales con los mismos códigos PRN, el mismo formato de mensaje y las mismas frecuencias. Son señales de radio reales; lo falso es la <b>información</b> que llevan. Hay tres niveles de sofisticación:</p>
+  <ul>
+    <li><b>Meaconing:</b> capta las señales reales y las retransmite con retardo y más potencia. Es simple, y fácil de detectar por las inconsistencias de tiempo.</li>
+    <li><b>Generativo:</b> sintetiza señales completas con un simulador o una radio definida por software, y puede inventar cualquier posición y hora. Si aparece de golpe, el receptor pierde el enganche y se nota el salto.</li>
+    <li><b>Sincronizado:</b> el más peligroso. Primero alinea su señal con la real (código, fase, Doppler y potencia), de modo que el receptor no note ninguna discontinuidad. Después sube de a poco la potencia y <b>arrastra</b> las pseudodistancias, corriendo la posición lentamente. Es el ataque típico que desvía a un dron sin generar alarmas.</li>
+  </ul>
+  <figure class="fig"><img src="../assets/uav/spoofing-arrastre.svg" alt="Tres pasos de un spoofing sincronizado: señal real, señal falsa alineada, arrastre del pico de correlación"><figcaption>El arrastre suave de un spoofing sincronizado. Diagrama propio.</figcaption></figure>
+  <p>En términos de electrónica del receptor, un spoofing exitoso logra que el pico de correlación falso supere y desplace al verdadero en el lazo de seguimiento del código. Por eso los ataques bien hechos igualan primero la potencia, para no disparar el AGC, y recién después mueven la fase del código.</p>
+
+  <h2 id="defensas">5. Cómo se defienden</h2>
+  <p>Ninguna técnica sola alcanza: los sistemas robustos combinan capas.</p>
+  <h3>Contra el jamming</h3>
+  <ul>
+    <li><b>Antenas CRPA</b> (patrón de recepción controlado): un arreglo de antenas que genera "nulos", zonas de ganancia casi cero, hacia donde viene el interferente. Un arreglo de <i>N</i> elementos puede anular hasta <i>N−1</i> fuentes a la vez. Es la defensa más efectiva, porque actúa por dirección y no por frecuencia, pero es cara, pesada y consume, y por eso queda para drones de gama alta y militares.</li>
+    <li><b>Filtros de muesca adaptativos</b> y <b>excisión</b> en tiempo (recortar los picos de un jamming pulsado) o en frecuencia.</li>
+    <li><b>Receptores multiconstelación y multifrecuencia:</b> obligan al atacante a interferir varias frecuencias a la vez.</li>
+    <li><b>Señales militares cifradas,</b> como el código M de GPS.</li>
+  </ul>
+  <h3>Contra el spoofing</h3>
+  <ul>
+    <li><b>Monitorear la señal:</b> un salto de C/N₀ o una corrección rara del AGC pueden delatar la señal falsa.</li>
+    <li><b>Ángulo de llegada:</b> los satélites reales llegan desde direcciones distintas, pero un spoofer transmite todo desde un solo punto. Con un arreglo de antenas se detecta que "todos los satélites" parecen venir del mismo lado, algo físicamente imposible.</li>
+    <li><b>Validación cruzada</b> entre GNSS, la navegación inercial, el barómetro y la visión. Si el GNSS se desvía de lo que dicen los otros sensores, se lo descarta o se le baja el peso. Es barata y de las más usadas.</li>
+    <li><b>RAIM</b> (monitoreo de integridad del receptor), pensado para detectar fallas de un satélite pero útil para ver saltos imposibles.</li>
+    <li><b>Autenticación criptográfica,</b> la defensa de raíz. Galileo OSNMA le agrega una firma digital al mensaje de navegación del servicio abierto, y según nuestras fuentes fue declarado operativo el 24 de julio de 2025, como la primera protección criptográfica contra spoofing para usuarios civiles a escala mundial. GPS tiene el equivalente en sus señales militares cifradas, y en desarrollo el esquema Chimera para uso civil. Ni siquiera esto es infalible contra una retransmisión muy bien sincronizada, así que se combina con las demás capas.</li>
+  </ul>
+
+  <h2 id="ley">6. Qué dice la ley</h2>
+  <p>El espectro GNSS está muy protegido, porque la radionavegación tiene que ver con la seguridad de la vida humana.</p>
+  <ul>
+    <li><b>UIT:</b> las bandas 1164–1215 MHz y 1559–1610 MHz están atribuidas a la radionavegación por satélite, con protección absoluta frente a interferencias perjudiciales. El Reglamento de Radiocomunicaciones prohíbe las señales falsas o engañosas (Art. 15.1), lo que cubre jamming y spoofing. En 2025 la UIT, la OACI y la OMI emitieron una declaración conjunta alertando del aumento de estos ataques.</li>
+    <li><b>OACI:</b> el Anexo 10 del Convenio de Chicago fija los requisitos del GNSS en términos de precisión, integridad, continuidad y disponibilidad según la fase de vuelo.</li>
+    <li><b>Argentina:</b> ENACOM administra el espectro (la radionavegación por satélite figura con categoría primaria en el CABFRA) y la Ley 27.078 lo declara recurso del dominio público del Estado. La ANAC regula los drones con la RAAC Parte 100 y la Resolución 550/2025, que reemplazó a la 880/2019.</li>
+    <li><b>Quién puede usar qué:</b> los canales abiertos (GPS L1 C/A, Galileo OS) son de uso libre. Los cifrados (GPS P(Y) y M, Galileo PRS) están reservados a usuarios estatales o militares autorizados.</li>
+  </ul>
+  <p>El resumen: interferir o suplantar señales GNSS es ilegal. Viola tanto la atribución del espectro como las normas de seguridad aérea.</p>
+
+  <h2 id="sistemas">7. Lo que existe hoy</h2>
+  <p>Los sistemas de protección van de lo militar a lo comercial:</p>
+  <table class="t">
+    <tr><th>Nivel</th><th>Ejemplo</th><th>Qué ofrece</th></tr>
+    <tr><td><b>Alta complejidad</b></td><td>NovAtel GAJT-AE3</td><td>Antena anti-jamming con CRPA: soporta interferencia desde hasta siete direcciones a la vez y hasta 65 dB de supresión. Con detección de spoofing.</td></tr>
+    <tr><td></td><td>Safran Skylight</td><td>Receptor de doble modo que procesa a la vez el código M de GPS y el PRS de Galileo.</td></tr>
+    <tr><td><b>Media</b></td><td>Septentrio (tecnología AIM+)</td><td>Mitigación de interferencias dentro del propio receptor, sin arreglos de antenas, con detección de spoofing.</td></tr>
+    <tr><td></td><td>u-blox de doble banda (F9 / F10)</td><td>Autenticación OSNMA de Galileo y doble banda L1/L5: una opción accesible y de bajo consumo.</td></tr>
+    <tr><td><b>Solo GNSS</b></td><td>Drones de consumo DJI (Mini / Air)</td><td>Dependen casi por completo del GNSS multiconstelación, sin antenas anti-jamming ni autenticación. Son el caso típico de los riesgos del informe.</td></tr>
+  </table>
+  <p>La tendencia es clara: capacidades que antes eran solo militares (autenticación, detección de spoofing, mitigación adaptativa) bajan a receptores civiles de menor costo, empujadas por la disponibilidad de OSNMA y por el aumento de incidentes.</p>
+
+  <h2 id="cierre">8. Qué me llevé</h2>
+  <p>La conclusión del informe es que <b>ninguna defensa individual alcanza</b>: la resiliencia sale de combinar capas (antenas CRPA, mitigación en el receptor, autenticación como OSNMA y validación cruzada con la navegación inercial y la visión). Y que una ley sólida protege el espectro, pero no frena a un atacante: la seguridad de un dron depende, en última instancia, de cómo está diseñado.</p>
+  <p>Es un tema que junta radiofrecuencia, procesamiento de señales, sistemas embebidos y la parte regulatoria que decide qué se puede y qué no.</p>
+
+  <h3>Algunas de las fuentes</h3>
+  <ul class="refs">
+    <li>ITU, <i>Radio Regulations</i> y declaración sobre protección del RNSS (2025).</li>
+    <li>ITU / ICAO / IMO, declaración conjunta sobre interferencia en la navegación satelital (2025).</li>
+    <li>ICAO, <i>Anexo 10 al Convenio de Chicago</i>, Volumen I.</li>
+    <li>ESA Navipedia, GPS Services y GNSS Authentication and Encryption.</li>
+    <li>EUSPA, Galileo OSNMA.</li>
+    <li>NovAtel, GAJT; NXP AN1428.</li>
+    <li>arXiv:2208.11555, <i>White Paper: Protecting GNSS Against Intentional Interference</i>.</li>
+    <li>ENACOM, CABFRA; ANAC, nuevo marco normativo para drones (RAAC Parte 100 / Resolución 550/2025); Ley 27.078.</li>
+  </ul>
+
+  <div class="pager"><a href="pid-motor-ecu.html">← Un PID para el ventilador de un radiador</a><a href="../index.html#proyectos">Todos los proyectos →</a></div>
+</article></main>
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span></div></footer>
+</body>
+</html>

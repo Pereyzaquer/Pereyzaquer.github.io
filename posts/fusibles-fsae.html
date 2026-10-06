@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fusibles a medida para el pack de FSAE · Nicolás Pereyra</title>
+<meta name="description" content="Por qué el pack de baterías de un auto de Formula SAE necesita un fusible por celda y cómo lo estoy diseñando y simulando en Ansys.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css?v=2">
+<style>
+  article h3 { font: 600 19px/1.3 var(--serif); margin: 28px 0 8px; }
+  .fig img { background: #fdfbf7; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; }
+  .fig.photo img { background: #fff; max-width: 280px; margin: 0 auto; display: block; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 15px; margin: 20px 0; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.t th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  article code { font: 0.88em var(--mono); background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; border-radius: 3px; }
+  .toc { font: 14px/1.9 var(--mono); }
+  .toc a { color: var(--muted); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .next { font: 500 14px var(--mono); color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; margin-top: 36px; }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="../index.html">npp<span>/</span>portfolio</a>
+  <nav><a href="../index.html#proyectos" aria-current="page">proyectos</a><a href="../cv.html">cv</a></nav>
+</div></header>
+<main class="wrap"><article>
+  <p class="eyebrow">2026 · UTN Motorsport (Formula SAE) · Ansys · MATLAB</p>
+  <h1>Fusibles a medida para el pack de baterías</h1>
+  <p class="meta">Un proyecto en curso: de los primeros modelos en MATLAB a las simulaciones en Ansys</p>
+
+  <p>Este es un resumen de lo que vengo haciendo con los fusibles del pack de baterías del auto eléctrico de UTN Motorsport. Es un trabajo en curso. <b>Por decisión del equipo no dejo información específica del diseño</b> (dimensiones, valores, geometrías ni resultados numéricos), pero sí cuento la idea general de lo que se elabora y cómo se llegó a ella.</p>
+
+  <p class="toc">
+    <a href="#problema">1. El problema</a><br>
+    <a href="#cotas">2. Las cotas que impone la normativa</a><br>
+    <a href="#modelos">3. Primeros modelos y materiales</a><br>
+    <a href="#disenos">4. Dos diseños: la tira y el puente</a><br>
+    <a href="#ahora">5. Dónde estamos</a>
+  </p>
+
+  <h2 id="problema">1. El problema</h2>
+  <p>El pack del auto está hecho de muchas celdas de ion-litio conectadas en paralelo y en serie. Si una celda falla, por ejemplo por un cortocircuito interno, puede empezar a calentarse sin control y arrastrar a sus vecinas: es lo que se llama <b>thermal runaway</b> (fuga térmica), y en un pack es uno de los peores escenarios posibles. Por eso las celdas en paralelo necesitan <b>un fusible individual cada una</b>, que desconecte a la celda que falla antes de que la corriente de las demás la termine de destruir.</p>
+  <figure class="fig photo"><img src="../assets/fusibles/fusible-cuchilla.png" alt="Fusible de cuchilla automotriz rojo"><figcaption>Un fusible de cuchilla de auto, el tipo más conocido. El nuestro es mucho más chico y es un fusible "de lámina" soldado a la celda.</figcaption></figure>
+  <p>Es la <b>última medida de protección</b> del pack: lo último que tiene que abrir. Antes están el fusible principal y el resto de las protecciones; si todo lo demás falló y una celda se está yendo de control, este fusible es lo único que queda entre esa celda y las otras.</p>
+  <p>Y no se puede comprar uno cualquiera. Tiene que abrir a una corriente y en un tiempo muy precisos, entrar físicamente en el pack y ser fácil de soldar. De ahí que lo estemos diseñando a medida.</p>
+
+  <h2 id="cotas">2. Las cotas que impone la normativa</h2>
+  <p>El diseño tiene dos límites, y cada uno sale de una regla distinta. El pack es de <b>5 celdas en paralelo</b> (Molicel P42A), con un fusible principal de <b>125 A</b>.</p>
+  <ul>
+    <li><b>Piso: 75 A.</b> La regla del reglamento (EV.6.6.5) pide que el fusible principal sea menor o igual a <b>un tercio de la suma</b> de los fusibles de las celdas en paralelo. Con 5 celdas y un principal de 125 A, cada fusible de celda debe valer al menos <code>3 × 125 / 5 = 75 A</code>. La idea es que el principal siempre abra primero.</li>
+    <li><b>Techo: 90 A.</b> El adendum de Brasil, que modifica las reglas para la competencia de Brasil, limita el fusible de celda a <b>el doble de la corriente nominal de la celda</b>. La P42A tiene 45 A nominales, así que el techo es <code>2 × 45 = 90 A</code>. Un fusible que aguantara más no protegería a la celda.</li>
+  </ul>
+  <figure class="fig"><img src="../assets/fusibles/ventana-75-90.svg" alt="Ventana de 75 a 90 amperes para el fusible de cada celda, con el piso y el techo y su origen"><figcaption>La zona de interés: el fusible de cada celda tiene que estar entre 75 y 90 A. Diagrama propio.</figcaption></figure>
+  <p class="next">Dentro de esa ventana, queda decidir de qué material y con qué forma.</p>
+
+  <h2 id="modelos">3. Primeros modelos y materiales</h2>
+  <p>Los primeros modelos térmicos los armé en <b>MATLAB</b>. Eran modelos pobres, pero cumplían su objetivo: dar una idea del <b>rango de valores</b> con el que había que trabajar antes de meterse en simulaciones más caras. En ese camino fui probando y descartando materiales:</p>
+  <table class="t">
+    <tr><th>Material</th><th>Qué pasó</th></tr>
+    <tr><td><b>Cobre</b></td><td>Se probó, pero <b>disipa demasiado calor</b>, lo que hace difícil que el fusible se caliente y abra, y además es un material <b>difícil de trabajar</b> en láminas tan finas.</td></tr>
+    <tr><td><b>Acero niquelado</b></td><td>Su punto de fusión se alcanzaba con <b>corrientes muy bajas</b>, lo que lo hacía inviable para estas baterías.</td></tr>
+    <tr><td><b>Ni200 (níquel puro)</b></td><td>Es el que finalmente elegimos.</td></tr>
+  </table>
+
+  <h2 id="disenos">4. Dos diseños: la tira y el puente</h2>
+  <h3>La tira</h3>
+  <p>Primero simulé en MATLAB una <b>tira</b> de Ni200 de sección pareja entre las dos pestañas. La curva que salió cumplía las normas, pero a tiempos largos (cuando el tiempo tiende a infinito) <b>no cerraba</b> en la corriente que necesitábamos. Además, era muy <b>sensible a la construcción</b>: pequeños cambios al fabricarla movían mucho el resultado. No nos terminó de convencer.</p>
+  <h3>El puente</h3>
+  <p>Por eso cambiamos de enfoque a un diseño que <b>concentra el punto de fusión en un puente chico</b>. Es el método que usan algunos fusibles comerciales: se reduce mucho la sección en un punto, de modo que el resto del metal casi no se calienta y hace falta <b>menos energía, pero más localizada</b>.</p>
+  <figure class="fig"><img src="../assets/fusibles/topologias.svg" alt="Esquema de dos topologías de fusible: una tira de sección pareja y un diseño con un puente donde se concentra el calor"><figcaption>Las dos ideas. En la tira se calienta todo el largo; en el puente, el calor queda concentrado. Esquema conceptual.</figcaption></figure>
+  <p>El puente tiene una contra clara: necesita <b>herramientas de fabricación con más precisión</b> y hay que considerar una <b>incertidumbre de fabricación</b> mayor, porque cualquier variación en una pieza tan chica cambia mucho dónde y cuándo abre.</p>
+  <p>Ese diseño lo estoy simulando en <b>Ansys</b> con un modelo térmico y eléctrico acoplado (el calentamiento por efecto Joule), incluyendo la celda real conectada. Para cada corriente se calcula cuánto tarda el fusible en abrir, y de ahí sale la <b>curva de apertura</b>, que tiene que atravesar unas ventanas de tiempo definidas por la norma.</p>
+  <figure class="fig"><img src="../assets/fusibles/curva-sin-valores.svg" alt="Curva de tiempo de apertura contra corriente, con las ventanas de tiempo de los cuatro niveles y la zona de interés"><figcaption>La curva obtenida en la simulación, con las ventanas de los niveles y la zona de interés. Se muestran sin valores.</figcaption></figure>
+
+  <h2 id="ahora">5. Dónde estamos</h2>
+  <p>Hoy estamos <b>esperando poder validar este desarrollo</b>: fabricar muestras y ensayarlas. Lo que esperamos es que, en la práctica, <b>las curvas se corran</b> respecto de la simulación. La razón es la <b>masa térmica</b> de los materiales: una celda conectada se "lleva" parte del calor del fusible, y eso cambia muchísimo cuánto tarda en abrir, sobre todo con corrientes bajas.</p>
+  <figure class="fig"><img src="../assets/fusibles/masa-termica.svg" alt="Tres curvas: fusible aislado, con la celda real y con un sumidero ideal de masa infinita"><figcaption>La masa térmica en simulación: el mismo fusible aislado, con la celda real y con un sumidero ideal. Sin valores.</figcaption></figure>
+  <p>Por eso el plan es <b>caracterizar esas masas térmicas</b> con ensayos reales y usar los resultados para <b>corregir el diseño final</b>. Mientras tanto, la simulación nos da el punto de partida y nos dice qué parámetros importan más.</p>
+
+  <div class="pager"><a href="../index.html#proyectos">← Todos los proyectos</a><a href="../cv.html">Ver CV →</a></div>
+</article></main>
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span></div></footer>
+</body>
+</html>

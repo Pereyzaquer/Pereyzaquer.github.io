@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IoT Cortina DIY · Nicolás Pereyra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="../index.html">npp<span>/</span>portfolio</a>
+  <nav><a href="../index.html#proyectos" aria-current="page">proyectos</a><a href="../cv.html">cv</a></nav>
+</div></header>
+<main class="wrap"><article>
+  <p class="eyebrow">2021 · ESP8266 · Sensor Hall</p>
+  <h1>IoT Cortina DIY</h1>
+  <p class="meta">Del lazo abierto a un encoder, sin saber que lo estaba armando</p>
+
+  <p>A la cortina de mi cuarto se le rompió la cinta. En lugar de arreglarla, decidí armar algo propio. El problema original: la cinta se trababa si bajaba demasiado rápido.</p>
+
+  <h2>Primera versión</h2>
+  <ul>
+    <li><b>Mecánica:</b> reemplacé el sistema por un motor de limpiaparabrisas de auto, montado con una pieza diseñada en Onshape e impresa en 3D.</li>
+    <li><b>Potencia:</b> un puente H comprado para controlar el sentido de giro.</li>
+    <li><b>Interfaz:</b> luces y un parlante que indican el estado (reposo, bajando, subiendo, abajo, arriba). Configuración con un control remoto infrarrojo de TV viejo.</li>
+    <li><b>Cerebro:</b> un ESP8266-12F, el microcontrolador que más usé en mis proyectos. Servía una página web local y, al conectarse por WiFi, obtenía fecha y hora para programar qué días y a qué hora subir o bajar.</li>
+  </ul>
+
+  <figure><div class="ph">Foto del motor y la pieza impresa (pendiente)</div></figure>
+
+  <h2>El problema que no había previsto</h2>
+  <p>Configuré la cortina para subir y bajar durante un tiempo fijo. Era un <b>lazo abierto</b>: no tenía punto de referencia y nunca sabía si había llegado a donde debía.</p>
+
+  <h2>La solución</h2>
+  <p>Rediseñé el conector entre el motor y la cortina para alojar un imán, y puse un sensor de efecto Hall en la pared. El sensor cuenta las vueltas y da una posición de referencia. En ese momento no lo sabía, pero estaba armando un <b>encoder</b>.</p>
+
+  <div class="callout"><p><b>Lección:</b> un sistema sin realimentación no puede saber si cumplió su objetivo. Es una idea que sigo usando hoy en electrónica de potencia.</p></div>
+
+  <div class="pager"><a href="peltier.html">← Peltier</a><a href="auto-qt.html">Siguiente: el auto →</a></div>
+</article></main>
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span></div></footer>
+</body>
+</html>

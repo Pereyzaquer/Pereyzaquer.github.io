@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" font-family="system-ui, Segoe UI, Arial, sans-serif" font-size="13">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1d1b18"/></marker></defs>
+<rect width="760" height="300" rx="10" fill="#fdfbf7" stroke="#d9d3c5"/>
+<text x="380" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1d1b18">La ventana del fusible de cada celda</text>
+<rect x="90" y="90" width="580" height="70" fill="#dde6f0" stroke="#3d5a80" stroke-width="2"/>
+<text x="380" y="132" text-anchor="middle" font-size="17" font-weight="700" fill="#3d5a80">ZONA DE INTERÉS</text>
+<line x1="90" y1="90" x2="90" y2="170" stroke="#b4441c" stroke-width="3"/>
+<line x1="670" y1="90" x2="670" y2="170" stroke="#b4441c" stroke-width="3"/>
+<line x1="90" y1="190" x2="670" y2="190" stroke="#1d1b18" stroke-width="1.4"/>
+<line x1="90.0" y1="186" x2="90.0" y2="194" stroke="#1d1b18" stroke-width="1.4"/>
+<text x="90.0" y="212" text-anchor="middle" fill="#1d1b18" font-weight="600">75 A</text>
+<line x1="283.3" y1="186" x2="283.3" y2="194" stroke="#1d1b18" stroke-width="1.4"/>
+<text x="283.3" y="212" text-anchor="middle" fill="#1d1b18" font-weight="600">80 A</text>
+<line x1="476.7" y1="186" x2="476.7" y2="194" stroke="#1d1b18" stroke-width="1.4"/>
+<text x="476.7" y="212" text-anchor="middle" fill="#1d1b18" font-weight="600">85 A</text>
+<line x1="670.0" y1="186" x2="670.0" y2="194" stroke="#1d1b18" stroke-width="1.4"/>
+<text x="670.0" y="212" text-anchor="middle" fill="#1d1b18" font-weight="600">90 A</text>
+<text x="380" y="236" text-anchor="middle" font-size="12" fill="#6b665d">Corriente nominal de apertura del fusible de cada celda</text>
+<text x="90" y="62" text-anchor="start" font-size="12.5" fill="#1d1b18" font-weight="600">Piso: 75 A</text>
+<text x="90" y="78" text-anchor="start" font-size="11.5" fill="#6b665d">principal 125 A ≤ ⅓ × (5 celdas × fusible)</text>
+<text x="670" y="62" text-anchor="end" font-size="12.5" fill="#1d1b18" font-weight="600">Techo: 90 A</text>
+<text x="670" y="78" text-anchor="end" font-size="11.5" fill="#6b665d">adendum de Brasil: 2 × 45 A (corriente nominal P42A)</text>
+<text x="380" y="272" text-anchor="middle" font-size="12" fill="#1d1b18">Más abajo de 75 A el fusible de la celda podría abrir antes que el principal; más arriba de 90 A, ya no protege a la celda.</text>
+</svg>

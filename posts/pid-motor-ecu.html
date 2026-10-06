@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Un PID para el ventilador de un radiador · Nicolás Pereyra</title>
+<meta name="description" content="Un lazo PID para el ventilador de un radiador: sensor, filtro, etapa de potencia, simulación, pruebas de laboratorio y un rediseño con un driver automotriz.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css?v=2">
+<style>
+  article h3 { font: 600 19px/1.3 var(--serif); margin: 28px 0 8px; }
+  .fig img { background: #fff; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0 6px; }
+  .two figure { margin: 0; }
+  .two img { background: #fff; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; display: block; }
+  .two figcaption { font-size: 14px; color: var(--muted); margin-top: 6px; }
+  @media (max-width: 620px) { .two { grid-template-columns: 1fr; } }
+  table.t { border-collapse: collapse; width: 100%; font-size: 15px; margin: 20px 0; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.t th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  article code { font: 0.88em var(--mono); background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; border-radius: 3px; }
+  .toc { font: 14px/1.9 var(--mono); }
+  .toc a { color: var(--muted); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="../index.html">npp<span>/</span>portfolio</a>
+  <nav><a href="../index.html#proyectos" aria-current="page">proyectos</a><a href="../cv.html">cv</a></nav>
+</div></header>
+<main class="wrap"><article>
+  <p class="eyebrow">2026 · Electrónica Aplicada al Automotor · UTN FRBA</p>
+  <h1>Un PID para el ventilador de un radiador</h1>
+  <p class="meta">Del sensor al driver, pasando por la simulación y el laboratorio</p>
+
+  <p>Este año, en la materia de electrónica automotriz, armamos con dos compañeros un <b>control de temperatura del refrigerante</b>: un lazo cerrado que regula la velocidad del ventilador del radiador con un <b>controlador PID</b>. Además, rediseñamos la etapa de potencia con un driver pensado para el automóvil, y en la materia también analizamos una <b>ECU</b> real (más abajo, solo como mención).</p>
+
+  <p class="toc">
+    <a href="#idea">1. La idea</a><br>
+    <a href="#sensor">2. El sensor: un termistor que no es lineal</a><br>
+    <a href="#potencia">3. El motor y la etapa de potencia</a><br>
+    <a href="#sim">4. Simulaciones</a><br>
+    <a href="#lab">5. Laboratorio</a><br>
+    <a href="#ecu">6. Una mención: la ECU</a><br>
+    <a href="#vnd">7. Rediseño con un driver automotriz</a>
+  </p>
+
+  <h2 id="idea">1. La idea</h2>
+  <p>El sistema funciona en <b>lazo cerrado</b>. Mide la temperatura del refrigerante y, según cuánto se aleja de lo deseado, ajusta la velocidad del ventilador. La potencia se comanda con una señal <b>PWM de 1 kHz</b>, y la realimentación sale de un <b>encoder incremental</b> que mide la velocidad real del motor. Además se mide la corriente del motor, como diagnóstico para detectar fallas.</p>
+  <p>Un <b>controlador PID</b> combina tres acciones sobre el error entre la velocidad deseada y la medida: una proporcional a cuánto vale el error, una que acumula el error pasado (y elimina el error que queda en régimen) y una que anticipa su tendencia. Ajustando sus ganancias se logra que el motor llegue rápido a la velocidad pedida sin pasarse.</p>
+
+  <h2 id="sensor">2. El sensor: un termistor que no es lineal</h2>
+  <p>Para medir la temperatura del líquido se usó un <b>termistor NTC</b>: su resistencia <i>baja</i> cuando la temperatura <i>sube</i>. El problema es que esa relación es marcadamente no lineal, casi exponencial. Con una excitación de 1 mA, en la simulación la tensión del NTC solo cae de unos 10 V a unos 1 V entre 25 y 85 °C. El truco para domarlo es barato: un <b>resistor en paralelo</b> aplana la curva y la deja mucho más lineal.</p>
+  <figure class="fig"><img src="../assets/pid/ntc-linealizacion.png" alt="Simulación en LTspice: curva del NTC sin linealizar y con resistor en paralelo"><figcaption>En azul, el NTC solo. En verde, con un resistor de 2,5 kΩ en paralelo: la curva se aplana. Simulación en LTspice.</figcaption></figure>
+  <p>Como la variación de resistencia es amplia, no hizo falta un puente de Wheatstone. La señal pasa por un <b>amplificador de instrumentación</b> y por un circuito que vigila al sensor, para detectar si está en cortocircuito o en circuito abierto.</p>
+  <h3>Un filtro de 10 Hz</h3>
+  <p>El dato clave está en la hoja de datos: el sensor tiene una <b>constante de tiempo térmica de 15 segundos</b>. La temperatura cambia muy despacio, y en un auto el ruido eléctrico es mucho más rápido (de ahí las normas CISPR 25 e ISO 7637). Entonces se puso un <b>filtro pasa-bajos activo de segundo orden (Sallen-Key)</b> con corte en 10 Hz. Se probó simulando dos interferencias, una de 10 kHz y 0,5 V y otra de 100 kHz y 2 V, con el sensor a 50 °C: el filtro las elimina y la medición queda limpia.</p>
+  <figure class="fig"><img src="../assets/pid/filtro-interferencias.png" alt="Simulación del sistema de adquisición con interferencias de 10 kHz y 100 kHz"><figcaption>Ensayo con interferencias de 10 kHz y 100 kHz sobre la medición.</figcaption></figure>
+
+  <h2 id="potencia">3. El motor y la etapa de potencia</h2>
+  <p>El actuador es un <b>motor de corriente continua reciclado de un plotter</b>, que ya traía un encoder incremental. Para manejarlo, la idea inicial era un MOSFET, pero se terminó usando un <b>par Darlington TIP120</b>, con un <b>fusible de 1 A</b> contra cortocircuitos. El microcontrolador recibe tres entradas: dos digitales (los dos canales del encoder, de los que se saca velocidad y sentido de giro) y una analógica (la corriente del motor).</p>
+  <figure class="fig"><img src="../assets/pid/etapa-potencia.png" alt="Esquemático de la etapa de potencia con TIP120, fusible, diodo, sensado de corriente y conector del motor"><figcaption>Etapa de potencia: TIP120, fusible, diodo de recirculación y un sensado de corriente con una resistencia shunt y un amplificador.</figcaption></figure>
+
+  <h2 id="sim">4. Simulaciones</h2>
+  <p>Para simular de verdad el motor, midimos la bobina con un medidor LCR (UNI-T UT622A): unos <b>6,4 mH</b> de inductancia. Con eso se simuló el arranque en LTspice con un PWM al 50 %: el motor se <b>establece en aproximadamente 1 ms</b>, con un <b>ripple de corriente de unos 46 mA</b> y un ripple de tensión de 1,8 mV.</p>
+  <p>El lazo de control completo se armó en Simulink, con un PID discreto, el modelo del motor y un bloque que representa el muestreo del conversor analógico-digital.</p>
+  <div class="two">
+    <figure><img src="../assets/pid/simulink-pid.png" alt="Diagrama de bloques en Simulink del lazo de control PID del motor"><figcaption>El lazo en Simulink.</figcaption></figure>
+    <figure><img src="../assets/pid/simulink-escalon.png" alt="Respuesta al escalón de 1500 rpm simulada"><figcaption>Respuesta a un escalón de 1500 rpm: llega en una fracción de segundo con un sobrepaso mínimo.</figcaption></figure>
+  </div>
+
+  <h2 id="lab">5. Laboratorio</h2>
+  <p>Después vino la parte real: el motor, una placa de prueba con su etapa de potencia y un microcontrolador ESP, con el osciloscopio midiendo. Para ajustar el lazo se hizo un <b>dashboard web</b>: desde una página se cambia el ciclo de trabajo del PWM, se modifican las ganancias <b>Kp y Ki</b> y se fija la <b>velocidad objetivo</b>, que en las pruebas fue de <b>5000 rpm</b>. El ensayo fue sin carga y con 12 V; bajo carga la respuesta sería distinta y el ciclo de trabajo, mayor.</p>
+  <figure class="fig"><img src="../assets/pid/laboratorio.png" alt="Montaje de laboratorio con el motor con encoder, la placa de prueba y el microcontrolador"><figcaption>El montaje en el laboratorio.</figcaption></figure>
+  <figure class="fig"><img src="../assets/pid/dashboard.png" alt="Dashboard de control del motor con velocidad, corriente y ciclo de trabajo"><figcaption>El dashboard: velocidad, objetivo, corriente y ciclo de trabajo, con campos para el tiempo de subida y la velocidad objetivo. Captura del modo de simulación, que corre en el navegador sin la placa.</figcaption></figure>
+
+  <h2 id="ecu">6. Una mención: la ECU</h2>
+  <p>En la materia también analizamos una <b>ECU</b> automotriz real (la computadora de un motor): con la placa física y sus esquemáticos, la tarea era identificar sobre el circuito qué componente cumple cada función. Por seguridad, y por tratarse de material de clase, <b>no publico imágenes ni detalles</b> de esa placa. Lo que me llevé es la idea general: un bloque que decide y, aparte, etapas de potencia que hacen el trabajo pesado, cada una con sus protecciones.</p>
+
+  <h2 id="vnd">7. Rediseño con un driver automotriz</h2>
+  <p>Con eso en mente, rediseñamos la etapa de potencia del motor con un integrado pensado para este mundo: el <b>VND5E050</b>, de ST. Es un <b>driver de lado alto</b> de dos canales, de unos <b>50 mΩ</b> por canal, que trae adentro limitación de corriente, protección térmica, detección de sobrecarga, cortocircuito y carga abierta, y una salida que informa la corriente. O sea, hace solo lo que en el primer diseño había que armar con componentes sueltos.</p>
+  <figure class="fig"><img src="../assets/pid/vnd5e050-circuito.png" alt="Esquemático del circuito rediseñado con el VND5E050, un diodo con resistor en el pin de masa y un TVS"><figcaption>La etapa de potencia rediseñada con el VND5E050 y su protección.</figcaption></figure>
+  <h3>Las decisiones de diseño, con sus datos</h3>
+  <ul>
+    <li><b>La resistencia de masa.</b> La hoja de datos pide una resistencia en el pin de masa. Según el cálculo debía estar entre <b>60 y 100 Ω</b>; con 81 Ω, en el peor caso (batería invertida) se disipan casi <b>2 W</b>. Demasiado. Se tomó la segunda alternativa: un <b>diodo en serie con la masa y una resistencia de 1 kΩ en paralelo</b>. El diodo bloquea la batería invertida casi sin disipar, y el kΩ da camino de retorno al motor, que es una carga inductiva. Costo: un corrimiento de unos 600 mV en los niveles.</li>
+    <li><b>Un nivel lógico justo.</b> Ese corrimiento agrava un problema que apareció al revisar la protección de entrada: con una salida alta del microcontrolador de apenas <b>2,64 V</b>, comandar directo al integrado no garantiza el umbral de entrada. Lo correcto sería un <b>level shifter a 5 V</b>. Quedó como mejora, y se adoptaron los valores que recomienda la hoja de datos (10 kΩ y 10 nF en la entrada).</li>
+    <li><b>Sensado de corriente.</b> Una resistencia de 6,2 kΩ hace que la salida de corriente recorra todo el rango del conversor analógico-digital. Como el sistema usa un solo integrado, el pin que permite compartir el sensado se conectó a masa.</li>
+    <li><b>El TVS contra el <i>load dump</i>.</b> En un auto, si se desconecta la batería con el alternador cargando, aparece un pico de tensión enorme. Se agregó un diodo <b>TVS SMBJ16A</b> de 600 W, que clampea alrededor de 26 V, bien por debajo del máximo que soporta el integrado.</li>
+  </ul>
+
+  <div class="pager"><a href="../index.html#proyectos">← Todos los proyectos</a><a href="guerra-electronica-uav.html">Siguiente: guerra electrónica en drones →</a></div>
+</article></main>
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span></div></footer>
+</body>
+</html>

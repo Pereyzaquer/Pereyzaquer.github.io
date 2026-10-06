@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 590" font-family="system-ui, Segoe UI, Arial, sans-serif" font-size="13">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1d1b18"/></marker><marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#b4441c"/></marker><marker id="c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#3d5a80"/></marker></defs>
+<rect width="760" height="590" rx="10" fill="#fdfbf7" stroke="#d9d3c5"/>
+<text x="380" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1d1b18">Diagrama vectorial del inversor trifásico (SVPWM)</text>
+<polygon points="300.0,290.0 500.0,290.0 400.0,116.8" fill="#f0dcd2" opacity="0.8"/>
+<polygon points="500.0,290.0 400.0,116.8 200.0,116.8 100.0,290.0 200.0,463.2 400.0,463.2" fill="none" stroke="#1d1b18" stroke-width="1.8"/>
+<circle cx="300" cy="290" r="173.2" fill="none" stroke="#b4441c" stroke-width="1.8"/>
+<circle cx="300" cy="290" r="150.0" fill="none" stroke="#3d5a80" stroke-width="1.6" stroke-dasharray="6 4"/>
+<line x1="300" y1="290" x2="500.0" y2="290.0" stroke="#6b665d" stroke-width="1" stroke-dasharray="3 3"/>
+<line x1="300" y1="290" x2="400.0" y2="116.8" stroke="#6b665d" stroke-width="1" stroke-dasharray="3 3"/>
+<line x1="300" y1="290" x2="200.0" y2="116.8" stroke="#6b665d" stroke-width="1" stroke-dasharray="3 3"/>
+<line x1="300" y1="290" x2="100.0" y2="290.0" stroke="#6b665d" stroke-width="1" stroke-dasharray="3 3"/>
+<line x1="300" y1="290" x2="200.0" y2="463.2" stroke="#6b665d" stroke-width="1" stroke-dasharray="3 3"/>
+<line x1="300" y1="290" x2="400.0" y2="463.2" stroke="#6b665d" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="532.0" y="294.0" text-anchor="start" font-weight="600" fill="#1d1b18">V1 (100)</text>
+<text x="419.0" y="98.3" text-anchor="start" font-weight="600" fill="#1d1b18">V2 (110)</text>
+<text x="181.0" y="98.3" text-anchor="end" font-weight="600" fill="#1d1b18">V3 (010)</text>
+<text x="68.0" y="294.0" text-anchor="end" font-weight="600" fill="#1d1b18">V4 (011)</text>
+<text x="181.0" y="489.7" text-anchor="end" font-weight="600" fill="#1d1b18">V5 (001)</text>
+<text x="419.0" y="489.7" text-anchor="start" font-weight="600" fill="#1d1b18">V6 (101)</text>
+<circle cx="300" cy="290" r="4" fill="#1d1b18"/>
+<text x="182" y="312" font-size="11.5" fill="#1d1b18">V0 (000), V7 (111)</text>
+<line x1="300" y1="290" x2="417.3" y2="290.0" stroke="#3d5a80" stroke-width="2.4" marker-end="url(#c)"/>
+<line x1="300" y1="290" x2="331.2" y2="236.0" stroke="#3d5a80" stroke-width="2.4" marker-end="url(#c)"/>
+<line x1="417.3" y1="290.0" x2="448.5" y2="236.0" stroke="#3d5a80" stroke-width="1.2" stroke-dasharray="4 3"/>
+<line x1="331.2" y1="236.0" x2="448.5" y2="236.0" stroke="#3d5a80" stroke-width="1.2" stroke-dasharray="4 3"/>
+<line x1="300" y1="290" x2="448.5" y2="236.0" stroke="#b4441c" stroke-width="3" marker-end="url(#b)"/>
+<text x="454.5" y="232.0" font-weight="700" fill="#b4441c">V<tspan font-size="10" dy="3">ref</tspan></text>
+<text x="397.3" y="312.0" font-size="12" fill="#3d5a80">T1·V1</text>
+<text x="323.2" y="230.0" font-size="12" fill="#3d5a80" text-anchor="end">T2·V2</text>
+<path d="M 360.0 290.0 A 60 60 0 0 0 356.4 269.5" fill="none" stroke="#1d1b18" stroke-width="1.2"/>
+<text x="366.0" y="280.0" font-size="12" fill="#1d1b18">α</text>
+<text x="370" y="140" font-size="12" fill="#6b665d" text-anchor="middle">Sector 1</text>
+<g font-size="12.5" fill="#1d1b18">
+<line x1="500" y1="66" x2="528" y2="66" stroke="#1d1b18" stroke-width="1.8"/><text x="536" y="70">Hexágono: |Vk| = 2/3·Vdc</text>
+<line x1="500" y1="90" x2="528" y2="90" stroke="#b4441c" stroke-width="1.8"/><text x="536" y="94">Límite SVPWM: Vdc/√3 = 0,577·Vdc</text>
+<line x1="500" y1="114" x2="528" y2="114" stroke="#3d5a80" stroke-width="1.6" stroke-dasharray="6 4"/><text x="536" y="118">Límite SPWM: Vdc/2 = 0,5·Vdc</text>
+</g>
+<rect x="20" y="470" width="720" height="100" rx="6" fill="#ece7db"/>
+<g font-size="12.5" fill="#1d1b18">
+<text x="36" y="492" font-weight="600">Vref = (T1/Ts)·V1 + (T2/Ts)·V2 + (T0/Ts)·V0</text>
+<text x="36" y="512">T1 = √3·Ts·|Vref|/Vdc · sen(60° − α)</text>
+<text x="36" y="530">T2 = √3·Ts·|Vref|/Vdc · sen(α)          T0 = Ts − T1 − T2</text>
+<text x="36" y="554" fill="#6b665d">El caso más exigente es α = 30°: ahí T1 + T2 = Ts define el límite |Vref| ≤ Vdc/√3.</text>
+</g></svg>

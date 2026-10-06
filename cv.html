@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CV · Nicolás Pereyra Pigerl</title>
+<style>
+  @page { size: A4; margin: 9mm 12mm; }
+  * { box-sizing: border-box; }
+  :root { --ink: #1a1a1a; --muted: #555; --accent: #103c5c; }
+  body { margin: 0; background: #e9e6df; font: 10.6px/1.42 "Segoe UI", Arial, sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .bar { max-width: 210mm; margin: 12px auto 0; display: flex; justify-content: space-between; font: 13px system-ui; padding: 0 4px; }
+  .bar a, .bar button { color: #b4441c; font: inherit; background: none; border: 0; cursor: pointer; text-decoration: underline; }
+  .page { width: 210mm; margin: 10px auto 30px; background: #fff; padding: 12mm 14mm; box-shadow: 0 2px 12px #0002; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; border-bottom: 2px solid var(--accent); padding-bottom: 7px; }
+  h1 { font-size: 23px; margin: 0; letter-spacing: -.01em; line-height: 1.1; }
+  .role { font-weight: 600; font-size: 11.2px; margin: 4px 0 0; color: var(--accent); }
+  .contact { text-align: right; color: var(--muted); font-size: 9.8px; line-height: 1.55; white-space: nowrap; }
+  h2 { font-size: 9.8px; letter-spacing: .15em; text-transform: uppercase; color: var(--accent); border-bottom: 1px solid #b8c7d3; padding-bottom: 2px; margin: 11px 0 5px; break-after: avoid; }
+  .job { margin-bottom: 6px; break-inside: avoid; }
+  .head { display: flex; justify-content: space-between; gap: 12px; }
+  .head b { font-size: 11px; }
+  .date { color: var(--muted); white-space: nowrap; }
+  .org { font-style: italic; color: #444; margin-top: 0; }
+  ul { margin: 3px 0 0; padding-left: 14px; }
+  li { margin-bottom: 1px; }
+  p { margin: 0; }
+  .skills { display: grid; grid-template-columns: 150px 1fr; gap: 2px 10px; }
+  .skills b { font-weight: 600; }
+  .proj li b { color: var(--accent); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; }
+  .small { font-size: 10.2px; color: #333; }
+  @media print {
+    body { background: #fff; font-size: 10.1px; line-height: 1.38; }
+    .bar { display: none; }
+    .page { margin: 0; box-shadow: none; width: auto; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="bar"><a href="index.html">← Portfolio</a><span><a href="CV_Nicolas_Pereyra_Pigerl.pdf" download>Descargar PDF</a> &nbsp;·&nbsp; <button onclick="print()">Imprimir</button></span></div>
+<div class="page">
+  <header>
+    <div>
+      <h1>Nicolás Enrique Pereyra Pigerl</h1>
+      <p class="role">Ingeniería Electrónica (próximo a recibirse) · Electrónica de potencia, sistemas embebidos y automotriz</p>
+    </div>
+    <div class="contact">
+      nico.pp02@gmail.com<br>
+      Recoleta, CABA<br>
+      github.com/Pereyzaquer<br>
+      linkedin.com/in/nicolás-pereyra-173160231
+    </div>
+  </header>
+
+  <h2>Perfil</h2>
+  <p>Estudiante avanzado de Ingeniería Electrónica (UTN FRBA) con experiencia práctica en <b>electrónica de potencia</b>, <b>sistemas embebidos</b> y <b>diagnóstico de fallas</b> con análisis de causa raíz. Diseño el inverter de tracción (~300 kW, IGBT) del auto de UTN Motorsport y coordino el trabajo de potencia y seguridad eléctrica del equipo. Desde 2019 construyo proyectos propios que van del firmware y el kernel de Linux hasta la placa y la simulación, y los explico en un portfolio técnico. Doble nacionalidad: argentina y alemana (UE).</p>
+
+  <h2>Experiencia</h2>
+  <div class="job">
+    <div class="head"><b>Responsable de Electrónica · UTN Motorsport (Formula SAE)</b><span class="date">2025 – Actualidad</span></div>
+    <ul>
+      <li><b>Inverter de tracción (~300 kW)</b> con módulo IGBT Infineon FS900; PCB en fabricación. Antecedente: inverter trifásico propio de 2025 (ver Proyectos).</li>
+      <li><b>Fusibles de celda a medida en Ni200</b> para el pack de baterías, como última protección ante thermal runaway: de los primeros modelos térmicos en MATLAB a simulaciones 3D en Ansys, dentro de la ventana que fija el reglamento (75–90 A), y banco de pruebas para validarlos.</li>
+      <li>Definí el rumbo eléctrico del vehículo: documentación inicial y dimensionamiento del pack de baterías.</li>
+      <li>Organicé y asigné las tareas del área de potencia y seguridad, con seguimiento del avance.</li>
+      <li>Diagnóstico de fallas en sistemas eléctricos y electrónicos con análisis de causa raíz (CAN y LIN).</li>
+    </ul>
+  </div>
+  <div class="job">
+    <div class="head"><b>Técnico de Laboratorio (Cat. 5) · ITBA</b><span class="date">2025 – Actualidad</span></div>
+    <ul>
+      <li>Mantenimiento y reparación de fuentes, osciloscopios, multímetros, reóstatos y otros equipos de laboratorio.</li>
+      <li>Asistencia a docentes y estudiantes en prácticas experimentales. Desde 2026, mejora del sistema de gestión de materiales del pañol.</li>
+    </ul>
+  </div>
+  <div class="job">
+    <div class="head"><b>Investigador · Radar FMCW (tipo Coffee Can Radar, ~1 GHz) · UTN</b><span class="date">2025</span></div>
+    <ul><li>Diseñé y simulé en Ansys una <b>antena bowtie direccional</b> con plano reflector y metamaterial: el ancho de banda pasó de 0,15 a 0,30 GHz y la ganancia pico de ~1,5 dB a ~7,8 dB respecto del diseño base.</li></ul>
+  </div>
+  <div class="job">
+    <div class="head"><b>Operario · Vail Resorts · Góndolas Tombstone y Red Pine, Utah, EE. UU.</b><span class="date">2024</span></div>
+    <ul><li>Operé dos máquinas y, junto a los mecánicos, aprendí su distribución eléctrica, a leer planos y las normas de seguridad. Trabajo en inglés.</li></ul>
+  </div>
+  <div class="job">
+    <div class="head"><b>Diseño de PCB · Producto comercial</b><span class="date">2023</span></div>
+    <ul><li>Diseño de placas para un producto comercial, controlando el resultado de la fabricación.</li></ul>
+  </div>
+  <div class="job">
+    <div class="head"><b>Técnico freelance</b><span class="date">2019 – Actualidad</span></div>
+    <ul><li>Diagnóstico, mantenimiento y reparación de equipos. Clases de matemática, álgebra y física de nivel secundario.</li></ul>
+  </div>
+
+  <h2>Proyectos destacados</h2>
+  <div class="job proj"><ul>
+    <li><b>Inverter trifásico para motor de 2 HP desde red monofásica (2025).</b> SVPWM con inyección de tercer armónico (+15 % de tensión con el mismo bus, lo que permite llegar a 220 V), control V/f, simulación en MATLAB y PLECS, módulo IPM y placa en KiCad.</li>
+    <li><b>Sistema operativo para ARM Cortex-A8 (2025).</b> C y Assembly: paginación de dos niveles, modos de privilegio, scheduler y cambio de contexto; simulado en QEMU y depurado con GDB/DDD.</li>
+    <li><b>Driver de kernel Linux para un MPU6050 en BeagleBone Black (2025).</b> Controlador I²C por registros e interrupciones, Device Tree Overlay y servidor TCP concurrente.</li>
+    <li><b>Control PID de un motor DC y análisis de una ECU (2026).</b> Sensor NTC con filtro, etapa de potencia, simulación en Simulink y LTspice, dashboard web y rediseño con un driver automotriz (VND5E050).</li>
+    <li><b>Guerra electrónica en UAVs (2026).</b> Informe sobre jamming y spoofing de señales GNSS: técnicas, defensas, normativa (UIT, OACI, ANAC) y sistemas reales.</li>
+    <li><b>Auto autónomo con integración Qt (2021).</b> Firmware en LPC845, control remoto por WiFi (ESP8266), modo autónomo y aplicación de escritorio.</li>
+    <li><b>Calibración del sensor láser VL53L1X según la reflectancia (2022)</b> y <b>IoT Cortina DIY (2021)</b>, con motor, ESP8266 y encoder con sensor Hall.</li>
+    <li><b>Otros:</b> micrófono USB DIY con AD620, PCM1808 y Raspberry Pi Pico 2; app DES en Dart para dividir gastos entre amigos (2026); amplificador de audio de 10 W y dimensionamiento eléctrico de una planta (2023); arcos a escala impresos en 3D (2022).</li>
+  </ul></div>
+
+  <h2>Educación y formación</h2>
+  <div class="job">
+    <div class="head"><b>Ingeniería Electrónica</b><span class="date">2020 – Actualidad</span></div>
+    <p class="org">Universidad Tecnológica Nacional, Facultad Regional Buenos Aires · Próximo a recibirse</p>
+  </div>
+  <div class="job small">
+    <div class="head"><span><b>Dispositivos implantables</b> (diseño de marcapasos) · EAMTA 2026, Universidad Nacional de Tucumán · Dr. Ing. Joel Gak (Uruguay)</span><span class="date">Mar. 2026</span></div>
+    <div class="head"><span><b>Armado y Reparación de PC</b> · UTN, 48 h</span><span class="date">2019</span></div>
+    <div class="head"><span><b>Bachiller en Ciencias Sociales</b> · Colegio Secundario Los Robles</span><span class="date">2019</span></div>
+    <div class="head"><span><b>Inglés Intermedio</b> · Frances King</span><span class="date">2018</span></div>
+  </div>
+
+  <h2>Habilidades</h2>
+  <div class="skills">
+    <b>Simulación y PCB</b><span>MATLAB · Simulink · PLECS · LTspice · TINA · Ansys Electronics · Ansys Mechanical · ADS · CST · KiCad · Altium</span>
+    <b>Embebidos y software</b><span>C · C++ · Assembly ARM · Python · Go · Java · Dart · Qt · NXP (LPC845) · ST (STM32) · Espressif (ESP8266) · Linux embebido (BeagleBone)</span>
+    <b>Digital y CAD</b><span>Verilog · VHDL · Vivado · Onshape · Fusion 360 · impresión 3D</span>
+    <b>Protocolos</b><span>CAN · LIN · I²C · UART · TCP/UDP · WiFi</span>
+    <b>Método e instrumental</b><span>Análisis de causa raíz · Modelo en V · Automotive SPICE · osciloscopio, multímetro, medidor LCR</span>
+    <b>Idiomas</b><span>Español nativo · Inglés intermedio · Portugués básico</span>
+  </div>
+</div>
+</body>
+</html>

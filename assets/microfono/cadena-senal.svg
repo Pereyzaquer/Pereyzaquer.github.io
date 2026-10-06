@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 310" font-family="system-ui, Segoe UI, Arial, sans-serif" font-size="13">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1d1b18"/></marker></defs>
+<rect width="760" height="310" rx="10" fill="#fdfbf7" stroke="#d9d3c5"/>
+<text x="380" y="30" text-anchor="middle" font-size="16" font-weight="600" fill="#1d1b18">De la voz a la computadora</text>
+<rect x="10" y="70" width="128" height="88" rx="6" fill="#ece7db" stroke="#6b665d" stroke-width="1.6"/>
+<text x="74" y="98" text-anchor="middle" font-weight="600" font-size="15" fill="#1d1b18">Cápsula</text>
+<text x="74" y="122" text-anchor="middle" font-size="11.5" fill="#6b665d">convierte el sonido</text>
+<text x="74" y="138" text-anchor="middle" font-size="11.5" fill="#6b665d">en tensión</text>
+<line x1="140" y1="114" x2="161" y2="114" stroke="#1d1b18" stroke-width="1.8" marker-end="url(#a)"/>
+<rect x="163" y="70" width="128" height="88" rx="6" fill="#f0dcd2" stroke="#b4441c" stroke-width="1.6"/>
+<text x="227" y="98" text-anchor="middle" font-weight="600" font-size="15" fill="#1d1b18">AD620</text>
+<text x="227" y="122" text-anchor="middle" font-size="11.5" fill="#6b665d">amplificador de</text>
+<text x="227" y="138" text-anchor="middle" font-size="11.5" fill="#6b665d">instrumentación</text>
+<line x1="293" y1="114" x2="314" y2="114" stroke="#1d1b18" stroke-width="1.8" marker-end="url(#a)"/>
+<rect x="316" y="70" width="128" height="88" rx="6" fill="#dde6f0" stroke="#3d5a80" stroke-width="1.6"/>
+<text x="380" y="98" text-anchor="middle" font-weight="600" font-size="15" fill="#1d1b18">PCM1808</text>
+<text x="380" y="122" text-anchor="middle" font-size="11.5" fill="#6b665d">conversor A/D</text>
+<text x="380" y="138" text-anchor="middle" font-size="11.5" fill="#6b665d">de audio</text>
+<line x1="446" y1="114" x2="467" y2="114" stroke="#1d1b18" stroke-width="1.8" marker-end="url(#a)"/>
+<rect x="469" y="70" width="128" height="88" rx="6" fill="#dde6f0" stroke="#3d5a80" stroke-width="1.6"/>
+<text x="533" y="98" text-anchor="middle" font-weight="600" font-size="15" fill="#1d1b18">Pico 2</text>
+<text x="533" y="122" text-anchor="middle" font-size="11.5" fill="#6b665d">recibe el audio</text>
+<text x="533" y="138" text-anchor="middle" font-size="11.5" fill="#6b665d">por I²S</text>
+<line x1="599" y1="114" x2="620" y2="114" stroke="#1d1b18" stroke-width="1.8" marker-end="url(#a)"/>
+<rect x="622" y="70" width="128" height="88" rx="6" fill="#ece7db" stroke="#6b665d" stroke-width="1.6"/>
+<text x="686" y="98" text-anchor="middle" font-weight="600" font-size="15" fill="#1d1b18">USB</text>
+<text x="686" y="122" text-anchor="middle" font-size="11.5" fill="#6b665d">micrófono</text>
+<text x="686" y="138" text-anchor="middle" font-size="11.5" fill="#6b665d">estándar</text>
+<line x1="10" y1="190" x2="291" y2="190" stroke="#b4441c" stroke-width="2"/><text x="150" y="212" text-anchor="middle" font-size="12" fill="#b4441c">analógica: lo más delicado, por el ruido</text>
+<line x1="316" y1="190" x2="750" y2="190" stroke="#3d5a80" stroke-width="2"/><text x="533" y="212" text-anchor="middle" font-size="12" fill="#3d5a80">digital: I²S hasta la Pico 2 y de ahí por USB</text>
+<text x="380" y="272" text-anchor="middle" font-size="11.5" fill="#6b665d">Al digitalizar con un conversor de audio dedicado, la Pico 2 solo tiene que mover datos.</text>
+</svg>

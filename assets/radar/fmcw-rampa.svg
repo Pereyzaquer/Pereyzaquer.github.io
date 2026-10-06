@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" font-family="system-ui, Segoe UI, Arial, sans-serif" font-size="13">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1d1b18"/></marker><marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#b4441c"/></marker></defs>
+<rect width="760" height="340" rx="10" fill="#fdfbf7" stroke="#d9d3c5"/>
+<text x="380" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1d1b18">Cómo la distancia se vuelve una frecuencia</text>
+<line x1="80" y1="280" x2="700" y2="280" stroke="#1d1b18" stroke-width="1.4" marker-end="url(#a)"/>
+<line x1="80" y1="280" x2="80" y2="50" stroke="#1d1b18" stroke-width="1.4" marker-end="url(#a)"/>
+<text x="696" y="300" text-anchor="end" fill="#6b665d">tiempo</text><text x="90" y="60" fill="#6b665d">frecuencia</text>
+<line x1="110" y1="250" x2="330" y2="90" stroke="#b4441c" stroke-width="2.6"/>
+<line x1="330" y1="90" x2="330" y2="250" stroke="#b4441c" stroke-width="2.6"/>
+<line x1="410" y1="250" x2="630" y2="90" stroke="#b4441c" stroke-width="2.6"/>
+<line x1="630" y1="90" x2="630" y2="250" stroke="#b4441c" stroke-width="2.6"/>
+<line x1="146" y1="250" x2="366" y2="90" stroke="#3d5a80" stroke-width="2.6" stroke-dasharray="7 4"/>
+<line x1="446" y1="250" x2="666" y2="90" stroke="#3d5a80" stroke-width="2.6" stroke-dasharray="7 4"/>
+<line x1="185.5" y1="198" x2="213.5" y2="198" stroke="#1d1b18" stroke-width="1.4" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="199.5" y="190" text-anchor="middle" font-size="12" font-weight="600" fill="#1d1b18">τ</text>
+<line x1="250" y1="151.2" x2="250" y2="171.4" stroke="#1d1b18" stroke-width="1.4" marker-end="url(#a)"/>
+<text x="262" y="165.3" font-size="12" font-weight="600" fill="#1d1b18">f<tspan font-size="9" dy="3">b</tspan></text>
+<line x1="430" y1="60" x2="470" y2="60" stroke="#b4441c" stroke-width="2.6"/><text x="478" y="64" font-size="12.5" fill="#1d1b18">Señal transmitida</text>
+<line x1="430" y1="82" x2="470" y2="82" stroke="#3d5a80" stroke-width="2.6" stroke-dasharray="7 4"/><text x="478" y="86" font-size="12.5" fill="#1d1b18">Señal reflejada, retrasada τ</text>
+<text x="380" y="322" text-anchor="middle" font-size="12" fill="#1d1b18">τ = 2d/c  y  f_b = m·τ  ⇒  d = c·f_b / (2m)       (m = pendiente de la rampa, en Hz/s)</text>
+</svg>

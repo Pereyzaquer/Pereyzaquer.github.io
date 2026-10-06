@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Un sistema operativo desde cero · Nicolás Pereyra</title>
+<meta name="description" content="Cómo armé un mini sistema operativo para ARM Cortex-A8: memoria virtual, paginación, modos de privilegio y cambio de contexto.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css?v=2">
+<style>
+  article pre { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; font: 13px/1.55 var(--mono); margin: 20px 0; }
+  article code { font: 0.88em var(--mono); background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; border-radius: 3px; }
+  article pre code { border: 0; padding: 0; background: none; font-size: inherit; }
+  article h3 { font: 600 19px/1.3 var(--serif); margin: 28px 0 8px; }
+  .fig img { background: #fdfbf7; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 15px; margin: 20px 0; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.t th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .toc { font: 14px/1.9 var(--mono); }
+  .toc a { color: var(--muted); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .codecap { font: 500 12px var(--mono); color: var(--muted); margin: 22px 0 -10px; }
+  .next { font: 500 14px var(--mono); color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; margin-top: 36px; }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="../index.html">npp<span>/</span>portfolio</a>
+  <nav><a href="../index.html#proyectos" aria-current="page">proyectos</a><a href="../cv.html">cv</a></nav>
+</div></header>
+<main class="wrap"><article>
+  <p class="eyebrow">2025 · UTN FRBA · ARM Cortex-A8 · C y Assembly</p>
+  <h1>Un sistema operativo desde cero: chocarse con la pared de la memoria</h1>
+  <p class="meta">Código: <a href="https://github.com/Pereyzaquer/Sistem-Operativo-ByNico/tree/main/sistema-operativo-arm">Sistem-Operativo-ByNico / sistema-operativo-arm</a></p>
+
+  <p>Cuando usás una computadora, una cosa se da por hecha: que la memoria funciona. Abrís un programa y tiene su espacio, abrís otro y también, y ninguno pisa al otro. No hay que hacer nada para que eso pase, y en casi todos los casos simplemente pasa.</p>
+  <p>Este proyecto hace lo contrario. La idea fue <b>chocarse con esa pared</b>: meterme en los distintos niveles de la memoria (física y virtual), en los niveles de privilegio del procesador y en el cambio de contexto, para entender cómo un sistema operativo consigue ejecutar varios programas al mismo tiempo sobre una sola CPU.</p>
+
+  <p class="toc">
+    <a href="#construi">1. Qué construí</a><br>
+    <a href="#so">2. Qué problemas resuelve un sistema operativo</a><br>
+    <a href="#privilegios">3. Quién puede hacer qué: los modos de ARM</a><br>
+    <a href="#memoria">4. Memoria física y memoria virtual</a><br>
+    <a href="#paginacion">5. Paginación y el registro TTBR0</a><br>
+    <a href="#switch">6. Compartir la CPU: el cambio de contexto</a><br>
+    <a href="#syscalls">7. Pedirle cosas al kernel: syscalls</a><br>
+    <a href="#arranque">8. Del encendido al sistema funcionando</a><br>
+    <a href="#simulacion">9. Cómo lo simulé y depuré</a>
+  </p>
+
+  <h2 id="construi">1. Qué construí</h2>
+  <p>Un kernel mínimo para un procesador <b>ARM Cortex-A8</b>, escrito en C y Assembly, sin librerías de sistema ni un sistema operativo debajo. Corre sobre una simulación de la placa <code>realview-pb-a8</code> (más detalles en la sección 9). Tiene:</p>
+  <ul>
+    <li><b>Tres tareas:</b> Tarea 1, Tarea 2 y una tarea <i>idle</i> que espera con <code>wfi</code> cuando no hay nada que hacer.</li>
+    <li><b>Un scheduler round-robin</b>: cada tarea recibe la CPU unos pocos ticks del timer y después se la pasa a la siguiente.</li>
+    <li><b>Memoria virtual con paginación de dos niveles:</b> cada tarea tiene su propia tabla de páginas y solo ve su memoria.</li>
+    <li><b>Modos de privilegio:</b> las tareas corren en modo usuario y el kernel en modos privilegiados.</li>
+    <li><b>Syscalls</b> y una pequeña cola circular con la que las tareas se pasan datos.</li>
+  </ul>
+  <p>Las tareas hacen algo simple a propósito. La <b>Tarea 1</b> recorre su área de memoria escribiendo el patrón <code>0x55AA55AA</code> / <code>0xAA55AA55</code> y le manda a la Tarea 2, por syscall, el índice que acaba de tocar. La <b>Tarea 2</b> lo recibe y lo guarda en <i>su</i> propia área; si no llega nada, invierte el valor que había. No son tareas útiles: son una excusa para ejercitar la memoria, los privilegios y la comunicación entre procesos.</p>
+
+  <h2 id="so">2. Qué problemas resuelve un sistema operativo</h2>
+  <p>Un sistema operativo es el programa que administra los recursos de la máquina (la CPU, la memoria y los dispositivos) para que varios programas los compartan sin molestarse. Eso se reduce a tres problemas, y cada uno tiene su herramienta. Este texto los recorre en este orden:</p>
+  <table class="t">
+    <tr><th>Problema</th><th>Herramienta</th><th>Sección</th></tr>
+    <tr><td>Que un programa no pueda romper al kernel ni a otro programa</td><td>Modos de privilegio + memoria virtual</td><td>3, 4 y 5</td></tr>
+    <tr><td>Que varios programas usen una sola CPU</td><td>Timer + scheduler + cambio de contexto</td><td>6</td></tr>
+    <tr><td>Que los programas usen el hardware sin acceder a él directamente</td><td>Syscalls</td><td>7</td></tr>
+  </table>
+  <p>Después, en la sección 8, se ve cómo arranca todo junto: qué se inicializa, en qué orden y por qué.</p>
+
+  <h2 id="privilegios">3. Quién puede hacer qué: los modos de ARM</h2>
+  <p>Todo empieza por decidir quién tiene permiso para hacer qué. ARMv7 tiene siete modos de ejecución: uno solo <b>sin privilegios</b> (User) y seis <b>privilegiados</b>. Cada modo privilegiado atiende un tipo de evento y tiene su propio <b>stack pointer</b>, por eso el arranque configura un SP por modo.</p>
+  <table class="t">
+    <tr><th>Modo</th><th>CPSR.M</th><th>Cuándo se usa acá</th></tr>
+    <tr><td>User</td><td><code>0x10</code></td><td>Tarea 1 y Tarea 2.</td></tr>
+    <tr><td>IRQ</td><td><code>0x12</code></td><td>Cada tick del timer: guarda el contexto y llama al scheduler.</td></tr>
+    <tr><td>SVC (Supervisor)</td><td><code>0x13</code></td><td>Syscalls (<code>SVC #0</code>) y modo en el que arranca la CPU.</td></tr>
+    <tr><td>Abort</td><td><code>0x17</code></td><td>Acceso a memoria inválido (por ejemplo, tocar una página que no está mapeada).</td></tr>
+    <tr><td>Undefined</td><td><code>0x1B</code></td><td>Instrucción inexistente o privilegiada ejecutada sin permiso.</td></tr>
+    <tr><td>FIQ</td><td><code>0x11</code></td><td>Interrupción rápida; en este proyecto no se usa.</td></tr>
+    <tr><td>System</td><td><code>0x1F</code></td><td>Privilegiado, pero comparte registros con User. La tarea idle corre acá y el kernel lo usa para leer y escribir el SP de usuario.</td></tr>
+  </table>
+
+  <h3>¿Por qué no se usa siempre el modo kernel?</h3>
+  <p>Porque un programa en modo privilegiado puede hacer <i>cualquier cosa</i>: cambiar de tabla de páginas, apagar la MMU, deshabilitar interrupciones, leer la memoria de otros. Si las tareas corrieran así, un solo error (un puntero mal calculado) podría corromper al kernel y tirar todo el sistema, y no habría aislamiento posible, porque cualquier tarea podría desactivarlo.</p>
+  <p>Con los programas en modo usuario, en cambio, cualquier intento de salirse de su espacio termina en una excepción que el kernel atiende, y el sistema sigue funcionando. Diferenciar los modos es lo que convierte a la memoria virtual en <b>protección real</b> y no solo en una traducción de direcciones.</p>
+
+  <h3>¿Cómo se pasa de un modo a otro?</h3>
+  <p>Un programa de usuario no puede elegir entrar al kernel: solo llega ahí por una <b>excepción</b>. Puede ser una interrupción (el timer), una syscall (<code>SVC</code>) o un error (acceso inválido, instrucción indefinida). La CPU guarda el estado anterior en <code>SPSR</code>, salta al código del kernel y, al terminar, <code>MOVS PC, LR</code> restaura el modo anterior. Lo único que ese programa controla es <i>cuándo pide</i> el servicio; lo que se ejecuta lo decide el kernel.</p>
+  <figure class="fig"><img src="../assets/so/modos-arm.svg" alt="Modos de ARM: usuario a la izquierda, privilegiados a la derecha, con las transiciones"><figcaption>Del modo usuario al kernel solo se entra por una excepción; se vuelve restaurando el CPSR guardado.</figcaption></figure>
+  <p>Así se ve en el handler de syscalls: entra guardando el contexto y sale con <code>movs pc, lr</code>, que restaura el modo usuario desde <code>SPSR</code>.</p>
+  <p class="codecap">Extracto de <code>core/handlers.s</code></p>
+  <pre><code class="language-asm">SVC_handler:
+    stmfd   sp!, {r1-r11, lr}       // Guardo r1-r11 y lr
+    mrs     r1, spsr
+    stmfd   sp!, {r1}               // Guardo SPSR
+
+    bl      svc_table               // Llama a tabla de syscalls con r0 y r7
+
+    ldmfd   sp!, {r1}               // Recupera SPSR
+    msr     spsr_fsxc, r1
+    ldmfd   sp!, {r1-r11, lr}       // Recupera resto del contexto (r0 intacto)
+    movs    pc, lr                  // Vuelve a modo usuario</code></pre>
+
+  <p class="next">Ya sabemos quién puede ejecutar qué. Falta la otra mitad del aislamiento: qué memoria puede tocar cada uno.</p>
+
+  <h2 id="memoria">4. Memoria física y memoria virtual</h2>
+  <p>La <b>memoria física</b> es la RAM real, con direcciones que el hardware entiende (en esta placa, la RAM empieza en <code>0x70000000</code>). La <b>memoria virtual</b> es la vista que tiene cada programa: direcciones que la <b>MMU</b> (Memory Management Unit) traduce a físicas usando tablas que arma el kernel.</p>
+  <p>¿Para qué sirve? Para tres cosas:</p>
+  <ul>
+    <li><b>Aislar:</b> cada tarea tiene sus tablas y solo ve las páginas que le mapearon. Si intenta tocar otra, la MMU genera un <i>Data Abort</i> (el modo Abort de la sección anterior).</li>
+    <li><b>Proteger al kernel:</b> sus páginas se marcan como solo-privilegiado, así una tarea no puede leerlas ni modificarlas.</li>
+    <li><b>Flexibilizar:</b> el programa no necesita saber dónde está realmente en la RAM.</li>
+  </ul>
+  <figure class="fig"><img src="../assets/so/aislamiento.svg" alt="Cada tarea accede solo a sus páginas físicas; el kernel es solo privilegiado"><figcaption>Cada tarea ve solo lo que su tabla mapea. Diagrama propio, con las direcciones reales del proyecto.</figcaption></figure>
+  <div class="callout"><p><b>Aclaración:</b> en esta versión el mapeo es de <i>identidad</i> (la dirección virtual es igual a la física). Lo que cambia entre tareas no es la traducción, sino <b>qué páginas existen y con qué permisos</b> en cada tabla. Es el primer paso; mapear una misma dirección virtual a distintas físicas es una evolución natural.</p></div>
+  <p class="next">Queda ver cómo son esas tablas, quién las apunta y dónde se guardan los permisos.</p>
+
+  <h2 id="paginacion">5. Paginación y el registro TTBR0</h2>
+  <p>La <b>paginación</b> divide la memoria en bloques fijos, las <i>páginas</i> (acá de 4 KiB), y traduce dirección por dirección con una tabla. Una tabla plana para 4 GiB de espacio de direcciones sería enorme, así que ARMv7 usa <b>dos niveles</b>:</p>
+  <ul>
+    <li><b>Tabla L1:</b> 4096 entradas × 4 bytes = 16 KiB. Cada entrada cubre 1 MiB y apunta a una tabla L2.</li>
+    <li><b>Tabla L2:</b> 256 entradas × 4 bytes = 1 KiB. Cada entrada describe una página de 4 KiB.</li>
+  </ul>
+  <p>La dirección virtual se corta en tres pedazos: los bits [31:20] eligen la entrada L1, los bits [19:12] la entrada L2, y los bits [11:0] son el desplazamiento dentro de la página. Por ejemplo, el código de la Tarea 1 está en <code>0x70F50000</code>: índice L1 = <code>0x70F</code> = 1807, índice L2 = <code>0x50</code> = 80.</p>
+  <figure class="fig"><img src="../assets/so/paginacion.svg" alt="Traducción de dos niveles: TTBR0, tabla L1, tabla L2, página física"><figcaption>La MMU recorre las tablas en hardware en cada acceso (y cachea el resultado en la TLB).</figcaption></figure>
+
+  <h3>¿Qué es TTBR0?</h3>
+  <p><b>TTBR0</b> (<i>Translation Table Base Register 0</i>) es el registro del coprocesador CP15 que guarda la <b>dirección física de la tabla L1</b> activa. Es el punto de partida de toda traducción: la MMU lee ahí para saber qué tabla usar. Debe estar alineado a 16 KiB, por eso en el linker script hay un <code>ALIGN(16384)</code>. Se escribe así:</p>
+  <pre><code class="language-asm">MCR p15, 0, r0, c2, c0, 0   @ TTBR0 = r0</code></pre>
+
+  <h3>¿Por qué hay un TTBR0 distinto por tarea?</h3>
+  <p>Porque cambiar de tarea es cambiar de tabla, y así cada una ve un espacio de direcciones distinto (<code>0x70080000</code>, <code>0x70090000</code>, <code>0x700A0000</code>). Un detalle importante: en este proyecto hay un TTBR0 por <b>tarea</b>, no uno por nivel de privilegio. Los privilegios se controlan <b>dentro de cada entrada</b>, con los bits AP:</p>
+  <table class="t">
+    <tr><th>Descriptor L2</th><th>AP[1:0]</th><th>Significado</th></tr>
+    <tr><td><code>paddr | 0x12</code></td><td>01</td><td>Solo modos privilegiados pueden leer y escribir. Se usa para kernel, vectores, timer, GIC y stacks IRQ.</td></tr>
+    <tr><td><code>paddr | 0x32</code></td><td>11</td><td>Lectura y escritura también desde modo usuario. Se usa para código, datos y stack de usuario de cada tarea.</td></tr>
+  </table>
+  <p>El kernel está mapeado (como solo-privilegiado) dentro de la tabla de <i>todas</i> las tareas. Así, cuando una tarea hace una syscall o llega una interrupción, la CPU ya puede ejecutar el código del kernel sin cambiar de tabla. Además, el registro <b>DACR</b> se carga con <code>0x55555555</code>: los 16 dominios en modo "cliente", que significa "respetar los bits AP de cada página".</p>
+  <p>En sistemas más grandes existe también <b>TTBR1</b>: el hardware usa TTBR0 para las direcciones bajas (procesos de usuario) y TTBR1 para las altas (kernel), de modo que solo se cambia TTBR0 al cambiar de proceso. Este proyecto no usa esa división.</p>
+
+  <h3>Cómo se implementa en el código</h3>
+  <p>La función <code>paginacion()</code> (en <code>proc/mmu.c</code>) recibe la tarea, la dirección física, la virtual, la cantidad de páginas y si son de usuario o privilegiadas. Por cada página calcula los índices, deja apuntando la entrada L1 a la tabla L2 y escribe la entrada L2 (extracto de <code>paginacion()</code>, con <code>...</code> donde recorté validaciones):</p>
+  <pre><code class="language-c">uint32_t l1_index = vaddr &gt;&gt; 20;              // Bits [31:20]
+uint32_t l2_index = (vaddr &gt;&gt; 12) &amp; 0xFF;     // Bits [19:12]
+...
+l1_table[l1_index] = ((uint32_t)&amp;l2_table[0] &amp; 0xFFFFFC00) | 0x1;
+
+switch (flag)
+{
+case PRIVILEGE:
+    l2_table[l2_index] = (paddr &amp; 0xFFFFF000) | 0x12;
+    break;
+case USER:
+    l2_table[l2_index] = (paddr &amp; 0xFFFFF000) | 0x32;
+    break;
+}</code></pre>
+  <p><code>init_ttbr0()</code> arma las tres tablas (Tarea 1, Tarea 2 e idle). Y <code>inicializar_mmu()</code> termina el trabajo: carga TTBR0, carga DACR y enciende el bit 0 (M) del registro de control SCTLR. Mientras se activa la MMU el procesador sigue ejecutando instrucciones, por eso el código de arranque está mapeado con identidad: la instrucción siguiente tiene que seguir estando en la misma dirección.</p>
+  <p>Así se arma el espacio de direcciones de la Tarea 1: el kernel es privilegiado y todo lo suyo es de usuario. Fijate que su stack de usuario y su stack de IRQ están en páginas distintas, con permisos distintos.</p>
+  <p class="codecap">Extracto de <code>init_ttbr0()</code> en <code>proc/mmu.c</code></p>
+  <pre><code class="language-c">paginacion(TASK1, F_ADDR_KERNEL,           V_ADDR_KERNEL,           CANT_KERNEL,      PRIVILEGE);
+paginacion(TASK1, F_ADDR_TASK1_SPACE_WORK, V_ADDR_TASK1_SPACE_WORK, SPACE_WORK_TASK1, USER);
+paginacion(TASK1, F_ADDR_TASK1,            V_ADDR_TASK1,            CANT_TASK1,       USER);
+paginacion(TASK1, F_STACK_TASK1_USR,       V_STACK_TASK1_USR,       STACK_SIZE_TASK1, USER);
+paginacion(TASK1, F_STACK_TASK1_PRI,       V_STACK_TASK1_PRI,       STACK_SIZE_TASK1, PRIVILEGE);</code></pre>
+
+  <p>Y estas son las tres instrucciones que activan todo. Por un lado se carga <code>TTBR0</code> con la tabla de la Tarea 1 y <code>DACR</code> con <code>0x55555555</code> (todos los dominios en modo cliente). Después se lee <code>SCTLR</code>, se prende el bit 0 (M) y se vuelve a escribir.</p>
+  <p class="codecap">Extracto de <code>inicializar_mmu()</code> en <code>proc/mmu.c</code></p>
+  <pre><code class="language-c">asm volatile(
+    "LDR   r0, =0x70080000    \n\t"
+    "MCR   p15, 0, r0, c2, c0, 0\n\t"   // TTBR0
+    "LDR   r0, =0x55555555    \n\t"
+    "MCR   p15, 0, r0, c3, c0, 0\n\t"   // DACR
+    "MRC   p15, 0, r1, c1, c0, 0\n\t"   // lee SCTLR
+    "ORR   r1, r1, #1         \n\t"      // bit 0: MMU enable
+    "MCR   p15, 0, r1, c1, c0, 0\n\t"   // escribe SCTLR
+    :
+    :
+    : "r0", "r1", "memory"
+);</code></pre>
+
+  <p>Cada tabla L1 ocupa 16 KiB y debe estar alineada a 16 KiB. Esa restricción está en el linker script, y el <code>TTBR0</code> de cada tarea se calcula sumando un desplazamiento fijo a la primera:</p>
+  <p class="codecap">Extracto de <code>memmap.ld</code> y de <code>inc/mmu.h</code></p>
+  <pre><code class="language-c">/* memmap.ld */
+. = _TTBR0_TAREA_1;
+.ttbr0_tarea_1 (NOLOAD):
+{
+    . = ALIGN(16384);
+    __ttbr0_tarea_1_start__ = .;
+    . = . + 0x4000;
+    __ttbr0_tarea_1_end__ = .;
+} &gt; public_ram
+
+/* mmu.h */
+#define TTBR0_TASK1     0x70080000
+#define TTBR0_TASK2     0x70090000
+#define TTBR0_IDLE      0x700A0000
+#define TTBR0_OFFSET    0x10000
+#define MY_TTBR0(n)     ((uint32_t*)(TTBR0_TASK1 + ((n) * TTBR0_OFFSET)))</code></pre>
+
+  <p class="next">Con memoria protegida y privilegios definidos, el sistema ya puede aislar tareas. Ahora hay que hacer que se turnen.</p>
+
+  <h2 id="switch">6. Compartir la CPU: el cambio de contexto</h2>
+  <p>Hay una sola CPU. Para que parezca que las tareas corren a la vez, el kernel las alterna cada pocos ticks del timer. El <b>contexto</b> de una tarea es todo lo necesario para retomarla exactamente donde quedó: los registros <code>r0–r12</code>, el <code>PC</code>, el <code>CPSR</code> y su stack. El <b>cambio de contexto</b> (<i>switch context</i>) es guardar el de la tarea que sale y cargar el de la que entra. Sin eso no habría multitarea: cada tarea sería un programa que se apodera de la CPU para siempre.</p>
+  <p>La pieza que lo dispara es el <b>timer</b>: se configura en modo periódico y cada vez que vence avisa al controlador de interrupciones (GIC), que interrumpe a la CPU. Es la excepción IRQ de la sección 3, y es lo que evita que una tarea acapare el procesador.</p>
+
+  <h3>Cómo se hace, paso a paso</h3>
+  <ol>
+    <li>El timer vence y la CPU entra en modo IRQ, guardando el <code>CPSR</code> en <code>SPSR_irq</code> y la dirección de retorno en <code>LR_irq</code>.</li>
+    <li><code>IRQ_handler</code> (assembly) apila en el stack IRQ de la tarea actual: <code>r0–r11</code>, <code>SPSR</code> y <code>LR</code>.</li>
+    <li>Llama a <code>kernel_handler_irq(sp)</code>, que atiende el timer y llama a <code>scheduler(sp)</code>.</li>
+    <li>El scheduler, cuando se cumplió el tiempo de la tarea: guarda su SP IRQ y su SP de usuario en su <b>TCB</b> (<i>Task Control Block</i>), pasa a la siguiente, <b>escribe su TTBR0</b>, restaura su SP de usuario y devuelve el SP IRQ de la nueva tarea.</li>
+    <li>De vuelta en el handler, <code>mov sp, r0</code> cambia al stack de la tarea nueva y se desapila todo. Con <code>movs pc, lr</code> la CPU restaura el <code>CPSR</code> desde <code>SPSR</code> y salta al <code>PC</code> guardado: ya está corriendo la otra tarea.</li>
+  </ol>
+  <figure class="fig"><img src="../assets/so/context-switch.svg" alt="Secuencia de cambio de contexto entre Tarea 1 y Tarea 2"><figcaption>El truco central: cambiar el SP de IRQ para que "volver de la interrupción" sea volver a otra tarea.</figcaption></figure>
+  <p>El handler de IRQ es Assembly. Lo primero que hace, <code>sub lr, lr, #4</code>, corrige la dirección de retorno: en una interrupción, <code>LR</code> apunta 4 bytes después de la instrucción interrumpida. Después guarda el contexto, le pasa el SP actual al código en C y <b>vuelve con el SP que ese código le devuelve</b>.</p>
+  <p class="codecap">Extracto de <code>core/handlers.s</code></p>
+  <pre><code class="language-asm">IRQ_handler:
+    sub     lr, lr, #4              // Ajusto el valor de retorno
+    stmfd   sp!, {r0-r11}
+    mrs     r1, spsr
+    stmfd   sp!, {r1, lr}
+
+    mov     r0, sp
+    bl      kernel_handler_irq
+    mov     sp, r0
+
+    ldmfd   sp!, {r1, lr}
+    msr     spsr_fsxc, r1
+    ldmfd   sp!, {r0-r11}
+    movs    pc, lr</code></pre>
+
+  <p>Y esta es la decisión del scheduler. Cuando a la tarea actual se le acaban los ticks, guarda sus dos SP en su TCB, avanza a la siguiente, <b>escribe su <code>TTBR0</code></b> y restaura su SP de usuario. Lo que devuelve es el SP de IRQ de la tarea nueva.</p>
+  <p class="codecap">Extracto de <code>scheduler()</code> en <code>sys/sys_tick.c</code></p>
+  <pre><code class="language-c">if (sche.tickCount &gt;= tasks[sche.currentTask]-&gt;ticks)
+{
+    // Guardo como variaron los sp
+    tasks[sche.currentTask]-&gt;stack_usr = read_sp_usr();
+    tasks[sche.currentTask]-&gt;stack_irq = actualSP;
+
+    // Cambiar a la siguiente tarea
+    sche.currentTask = (sche.currentTask + 1) % 3;
+
+    asm volatile (
+        "MCR p15, 0, %0, c2, c0, 0\n" // Escribe nuevo_ttbr0 en TTBR0
+        :: "r" (MY_TTBR0(sche.currentTask))
+        : "memory"
+    );
+
+    newSP = tasks[sche.currentTask]-&gt;stack_irq;
+    write_sp_usr(tasks[sche.currentTask]-&gt;stack_usr); // Cambia el SP del modo Sys y User
+
+    sche.tickCount = 0;
+}</code></pre>
+
+  
+  <p>La primera vez que una tarea se ejecuta no tiene un contexto guardado. <code>initTask()</code> lo <b>fabrica</b> a mano: deja en su stack IRQ un marco falso con el <code>LR</code> apuntando al inicio de la función y el <code>SPSR</code> con el modo correcto (usuario para las tareas, System para idle). Al "volver" de una interrupción que nunca ocurrió, la CPU entra a la tarea por primera vez.</p>
+  <p class="codecap">Extracto de <code>initTask()</code> en <code>sys/sys_tick.c</code></p>
+  <pre><code class="language-c">for (int i = 0; i &lt; 3; i++) {
+    TCB* t = arr[i];
+    t-&gt;stack_irq = irq_tops[i] - OFFSET;
+    t-&gt;stack_usr = usr_tops[i];
+
+    uint32_t *aux = (uint32_t*)t-&gt;stack_irq;
+    *(aux + OFFSET_LR) = (uint32_t)funcs[i];      // "vuelvo" al inicio de la tarea
+
+    if (i == IDLE)
+        *(aux + OFFSET_SPSR) = MASK_SYS_CPSR;     // idle: modo System
+    else
+        *(aux + OFFSET_SPSR) = MASK_USER_CPSR;    // tareas: modo usuario
+}</code></pre>
+
+  <p class="next">Las tareas ya se turnan y están aisladas. Pero a veces necesitan algo que solo el kernel puede dar.</p>
+
+  <h2 id="syscalls">7. Pedirle cosas al kernel: syscalls</h2>
+  <p>Una tarea en modo usuario no puede tocar el hardware ni las estructuras del kernel. Cuando necesita un servicio, ejecuta la instrucción <code>SVC #0</code>: es una excepción provocada a propósito, que lleva a la CPU a modo Supervisor. El número de servicio va en <code>r7</code> y el argumento en <code>r0</code>.</p>
+  <pre><code class="language-c">// En la Tarea 1 (modo usuario)
+register uint32_t r0 __asm__("r0") = val;   // dato a enviar
+register uint32_t r7 __asm__("r7") = 0;     // 0 = SEND, 1 = RECV
+asm volatile ("svc #0" : : "r"(r0), "r"(r7) : "memory");</code></pre>
+  <p><code>SVC_handler</code> guarda los registros, llama a <code>svc_table</code>, que despacha según <code>r7</code>, y vuelve con <code>movs pc, lr</code>, que además devuelve el modo usuario. El resultado vuelve en <code>r0</code>.</p>
+  <p class="codecap">Extracto de <code>svc_table()</code> en <code>sys/sys_tick.c</code></p>
+  <pre><code class="language-c">uint32_t svc_table(void)
+{
+    register uint32_t r0 __asm__("r0"); // argumento
+    register uint32_t r7 __asm__("r7"); // syscall id
+
+    switch (r7)
+    {
+    case SEND:
+        return syscall_pipeline_enqueue(r0);
+    case RECV:
+        return syscall_pipeline_dequeue();
+    default:
+        return 0xFFFFFFFF; // syscall inválida
+    }
+}</code></pre>
+
+  <p>Con estas dos syscalls se arma un canal entre tareas: una <b>cola circular</b> de 16 posiciones que vive en memoria del kernel. La Tarea 1 encola (<code>SEND</code>) el índice que tocó, la Tarea 2 desencola (<code>RECV</code>). Las tareas nunca se ven la memoria entre sí: se comunican solo a través del kernel, y ese es justo el punto de haberlas aislado.</p>
+  <p class="next">Con todas las piezas conocidas, se puede seguir el camino completo desde que se enciende el procesador.</p>
+
+  <h2 id="arranque">8. Del encendido al sistema funcionando</h2>
+  <h3>¿Desde qué dirección empieza a ejecutar?</h3>
+  <p>En un Cortex-A real, apenas sale del reset el procesador toma el vector de reset en <code>0x00000000</code> (o <code>0xFFFF0000</code> si están activados los vectores altos), en modo Supervisor, con las interrupciones enmascaradas y la MMU apagada. En este proyecto, con QEMU, el binario se carga en <code>0x70010000</code>, el <code>ENTRY</code> del linker script es <code>_reset_vector</code>, y ahí hay una única instrucción: <code>B _start</code>.</p>
+
+  <h3>La tabla de vectores, y por qué es ascendente</h3>
+  <p>Las excepciones de la sección 3 tienen que saber adónde saltar. Cuando ocurre una, el procesador no busca una dirección en ningún lado: salta a una <b>dirección fija</b>, la base de vectores más un desplazamiento que depende del tipo de excepción. Ese orden lo define el hardware, en direcciones crecientes de a 4 bytes:</p>
+  <table class="t">
+    <tr><th>Offset</th><th>Excepción</th><th>Offset</th><th>Excepción</th></tr>
+    <tr><td><code>0x00</code></td><td>Reset</td><td><code>0x10</code></td><td>Data Abort</td></tr>
+    <tr><td><code>0x04</code></td><td>Undefined</td><td><code>0x14</code></td><td>Reservado</td></tr>
+    <tr><td><code>0x08</code></td><td>SVC</td><td><code>0x18</code></td><td>IRQ</td></tr>
+    <tr><td><code>0x0C</code></td><td>Prefetch Abort</td><td><code>0x1C</code></td><td>FIQ</td></tr>
+  </table>
+  <p>Cada posición contiene una sola instrucción, así que se usa <code>LDR PC, dirección_del_handler</code> y las direcciones van en una tabla de constantes pegada a continuación. <code>startup.s</code> arma esa tabla y un bucle la copia con post-incremento (<code>LDR R3,[R1],#4 / STR R3,[R0],#4</code>) hacia <code>0x00000000</code>, que es donde el hardware la va a buscar. Por eso esa zona está mapeada (16 páginas, solo-privilegiadas) en todas las tablas de páginas. Como esas instrucciones usan direccionamiento relativo al PC, funcionan igual una vez copiadas.</p>
+  <p class="codecap">Extracto de <code>core/startup.s</code></p>
+  <pre><code class="language-asm">_table_start:
+    LDR PC, add_reset_vector       // 0x00
+    LDR PC, add_UND_handler        // 0x04
+    LDR PC, add_SVC_handler        // 0x08
+    LDR PC, add_PREFETCH_handler   // 0x0C
+    LDR PC, add_ABT_handler        // 0x10
+    LDR PC, add_reserved           // 0x14
+    LDR PC, add_IRQ_handler        // 0x18
+    LDR PC, add_FIQ_handler        // 0x1C
+
+add_reset_vector:       .word _reset_vector
+add_UND_handler:        .word UND_handler
+add_SVC_handler:        .word SVC_handler
+...
+
+_table_copy:
+    MOV R0, #0                     // destino: 0x00000000
+    LDR R1,=_table_start
+    LDR R2,=_start
+
+_table_loop:
+    LDR R3, [R1],#4                // leo y avanzo 4 bytes
+    STR R3, [R0],#4                // escribo y avanzo 4 bytes
+    CMP R1, R2
+    BNE _table_loop</code></pre>
+
+  <p>Lo contrario pasa con los <b>stacks</b>: crecen hacia direcciones <i>menores</i> (<code>STMFD</code> = <i>Full Descending</i>), por eso en el linker se define el <b>tope</b> de cada uno.</p>
+  <p>Para inicializar un stack por modo, el arranque cambia de modo escribiendo <code>CPSR</code> y carga el <code>SP</code> de ese modo. Se enmascaran IRQ y FIQ (<code>I_BIT | F_BIT</code>) mientras dura la inicialización:</p>
+  <p class="codecap">Extracto de <code>core/startup.s</code></p>
+  <pre><code class="language-asm">//IRQ
+    MSR cpsr_c, #(IRQ_MODE | I_BIT | F_BIT)
+    LDR SP, =__irq_tarea1_top__
+
+//FIQ
+    MSR cpsr_c, #(FIQ_MODE | I_BIT | F_BIT)
+    LDR SP, =__fiq_stack_top__
+...
+//Supervisor
+    MSR cpsr_c, #(SVC_MODE | I_BIT | F_BIT)
+    LDR SP, =__svc_stack_top__</code></pre>
+
+
+  <h3>El flujo completo</h3>
+  <figure class="fig"><img src="../assets/so/arranque.svg" alt="Flujo de arranque, del reset al scheduler funcionando"><figcaption>Todo lo que ocurre antes de la primera línea de una tarea.</figcaption></figure>
+  <ol>
+    <li><b>Reset</b> en <code>0x70010000</code>: <code>B _start</code>.</li>
+    <li><b>Assembly:</b> se copia la tabla de vectores a <code>0x0</code>.</li>
+    <li><b>Assembly:</b> se inicializa un SP por modo (IRQ, FIQ, Abort, Undefined, System, Supervisor) cambiando el modo con <code>MSR cpsr_c</code>.</li>
+    <li><b>C, <code>__board_init()</code>:</b> <code>vma_copy()</code> copia cada sección de donde el linker la guardó (LMA) a donde va a correr (VMA), simulando cargar desde flash a RAM; inicializa el GIC y el timer; <code>initTask()</code> fabrica los contextos iniciales; <code>inicializar_mmu()</code> arma las tablas y enciende la MMU.</li>
+    <li><b>Assembly:</b> <code>MSR SPSR, #USR_MODE</code> y <code>MOVS PC, Tarea_1</code>: la CPU entra en modo usuario y arranca la primera tarea.</li>
+    <li><b>Régimen:</b> cada tick del timer dispara el scheduler; las tareas usan <code>SVC</code> para comunicarse.</li>
+  </ol>
+  <p>El último tramo, en código. Primero se llama a <code>__board_init()</code>, y después el salto a la primera tarea: <code>SPSR</code> se deja en modo usuario y <code>MOVS PC</code> lo copia en <code>CPSR</code> mientras salta.</p>
+  <p class="codecap">Extractos de <code>proc/board_init.c</code> y <code>core/startup.s</code></p>
+  <pre><code class="language-asm">/* board_init.c */
+vma_copy();                         // Copia las secciones de LMA a VMA
+__gic_init();
+__timer_init();
+initTask();
+inicializar_mmu();                  // inicializa la mmu
+
+/* startup.s */
+    LDR R10, =__board_init
+    MOV LR, PC                      // Almaceno la dirrecion de retorno
+    BX R10
+
+    MSR SPSR_cxsf, #USR_MODE        // Entrás al modo usuario
+    LDR R10, =Tarea_1
+    MOVS PC, R10</code></pre>
+
+
+  <h2 id="simulacion">9. Cómo lo simulé y depuré</h2>
+  <p>No lo corrí en una placa real: todo el sistema corre en una <b>simulación de un microprocesador ARM Cortex-A8</b> dentro de mi computadora, con <b>QEMU</b> emulando la placa <code>realview-pb-a8</code> (CPU, RAM, timer y controlador de interrupciones GIC incluidos).</p>
+  <p>Para ver qué pasaba por dentro usé el depurador <b>GDB</b> conectado a QEMU y, encima, la interfaz gráfica <b>DDD</b>. QEMU se lanza en pausa y abre un servidor GDB; desde DDD se ejecuta paso a paso, se ponen breakpoints y se inspeccionan los registros y la memoria. Eso fue clave para un proyecto así, porque los errores no dan mensajes: se ve cómo cambia <code>CPSR</code> al entrar en modo IRQ, qué vale cada SP, o si el <code>TTBR0</code> apunta a la tabla que corresponde después de un cambio de contexto.</p>
+  <pre><code class="language-sh">make          # compila con arm-none-eabi-gcc
+make debug    # QEMU en pausa, esperando a GDB (puerto 2159)
+ddd --debugger gdb-multiarch obj/ejer3.elf</code></pre>
+  <p>El <code>Makefile</code> también genera el mapa de memoria del linker y el listado desensamblado, que fueron útiles para comprobar que cada sección quedaba en la dirección esperada.</p>
+
+  <div class="callout"><p>Todo el código, con el <code>Makefile</code> para compilar y correr en QEMU, está en <a href="https://github.com/Pereyzaquer/Sistem-Operativo-ByNico/tree/main/sistema-operativo-arm">Sistem-Operativo-ByNico</a> (carpeta <code>sistema-operativo-arm</code>).</p></div>
+
+  <div class="pager"><a href="../index.html#proyectos">← Todos los proyectos</a><a href="mpu6050-beaglebone.html">Siguiente: desarrollo de drivers para Linux →</a></div>
+</article></main>
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span></div></footer>
+<script src="../js/highlight.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EAMTA 2026: dispositivos implantables · Nicolás Pereyra</title>
+<meta name="description" content="Apuntes de un curso sobre dispositivos implantables activos, con foco en marcapasos: señales, estimulación segura, baterías y alta tensión en CMOS.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css?v=2">
+<style>
+  article h3 { font: 600 19px/1.3 var(--serif); margin: 28px 0 8px; }
+  .fig img { background: #fdfbf7; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 15px; margin: 20px 0; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.t th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .toc { font: 14px/1.9 var(--mono); }
+  .toc a { color: var(--muted); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .next { font: 500 14px var(--mono); color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; margin-top: 36px; }
+  .fig.narrow img { max-width: 300px; margin: 0 auto; display: block; }
+  .titlebar { display: flex; align-items: center; gap: 22px; margin-bottom: 8px; }
+  .titlebar h1 { margin-bottom: 8px; }
+  .titlebar .meta { margin-bottom: 0; }
+  .logo-side { flex: 0 0 auto; height: 112px; width: auto; }
+  @media (max-width: 560px) { .titlebar { flex-direction: column; align-items: flex-start; } .logo-side { height: 84px; } }
+  .logo { display: block; max-height: 90px; width: auto; max-width: 100%; margin: 0 0 22px; }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="../index.html">npp<span>/</span>portfolio</a>
+  <nav><a href="../index.html#proyectos" aria-current="page">proyectos</a><a href="../cv.html">cv</a></nav>
+</div></header>
+<main class="wrap"><article>
+  <div class="titlebar">
+    <img class="logo-side" src="../assets/eamta/logo-eamta-recortado.png" alt="Logo de EAMTA">
+    <div>
+      <p class="eyebrow">Marzo de 2026 · EAMTA · Universidad Nacional de Tucumán · Electrónica biomédica</p>
+      <h1>Dispositivos implantables: lo que aprendí sobre diseñar un marcapasos</h1>
+      <p class="meta">Apuntes de un curso, sin pretensión de guía de diseño</p>
+    </div>
+  </div>
+
+  <p>En marzo de 2026 fui a Tucumán a la <b>EAMTA 2026</b> (20.ª edición, del 9 al 13 de marzo, en la Universidad Nacional de Tucumán) a hacer un curso de <b>dispositivos implantables</b>. Lo dio el <b>doctor ingeniero Joel Gak</b>, de Uruguay, que se especializó en el diseño y la fabricación de <b>marcapasos</b>, y por eso gran parte del curso giró en torno a ellos. Hubo además una charla de <b>Alfredo Arnaud</b>, que trabaja en CCC, una empresa fundada hace mucho por un cardiólogo.</p>
+  <p>Vimos los circuitos básicos y, sobre todo, <b>las consideraciones de diseño</b> que cambian cuando el circuito va dentro de una persona. Estas son las ideas que anoté, ordenadas.</p>
+
+  <p class="toc">
+    <a href="#que">1. Qué es un implante activo</a><br>
+    <a href="#senal">2. El reto de la señal</a><br>
+    <a href="#estimulo">3. Estimular sin dañar</a><br>
+    <a href="#energia">4. De dónde sale la energía</a><br>
+    <a href="#hv">5. Alta tensión: depende del contexto</a><br>
+    <a href="#seguridad">6. Seguridad</a><br>
+    <a href="#llevo">7. Qué me llevé</a>
+  </p>
+
+  <h2 id="que">1. Qué es un implante activo</h2>
+  <p>Los dispositivos implantables son implantes que ayudan a mejorar la calidad de vida de las personas. En el curso nos centramos en los <b>activos</b>: los que tienen electrónica y energía propia, y van insertados debajo de la piel. El primero fue el <b>marcapasos</b>, y su variante más conocida es el <b>ICD</b> (desfibrilador implantable). Otro ejemplo, menos frecuente, es la <b>prótesis coclear</b>.</p>
+  <p>Un marcapasos <b>escucha al corazón</b>. Si encuentra una señal extraña, envía pulsos para estimularlo. Todo lo que sigue sale de esas dos tareas: sensar con mucha precisión y estimular sin hacer daño.</p>
+  <p>Estos dispositivos se resuelven con <b>ASIC</b> (<i>Application Specific Integrated Circuit</i>): un circuito integrado diseñado para esa única aplicación, con el tamaño, el consumo y el ruido que el caso necesita.</p>
+
+  <h2 id="senal">2. El reto de la señal</h2>
+  <h3>Pocos microvolts, poco ruido</h3>
+  <p>El desafío del sensado es que las señales son de <b>baja frecuencia y de amplitudes muy chicas</b>, del orden de los microvolts en los casos más exigentes. Eso obliga a que toda la electrónica de entrada tenga:</p>
+  <ul>
+    <li><b>Bajo ruido.</b></li>
+    <li><b>CMRR muy alto</b> (rechazo de modo común), porque el cuerpo es un ambiente lleno de interferencias.</li>
+    <li><b>Alta ganancia.</b></li>
+    <li><b>Bajo consumo</b>, porque el dispositivo tiene que funcionar durante años con una batería chica (las baterías que mencionamos andan entre 900 y 2000 mAh).</li>
+  </ul>
+  <h3>Cada cuerpo es distinto</h3>
+  <p>Cada persona tiene un cuerpo diferente y una respuesta diferente. El comparador tiene que medir bien la señal, pero esa señal puede cambiar su amplitud unas <b>100 veces</b>. Por eso el ajuste no puede ser fijo: se necesita un <b>umbral dinámico o adaptable</b>. Se mencionó el paper de <b>Wong (2004)</b> como la base de los sensores cardíacos.</p>
+  <h3>Un procesador a medida</h3>
+  <p>Para el control se usan procesadores <b>RISC-V</b>, que permiten armar un micro a medida. La pregunta que se planteó es de diseño puro: si estoy armando un marcapasos, ¿para qué quiero un I²C o cualquier periférico que no voy a usar? En un ASIC, cada bloque que sobra es consumo y área desperdiciados.</p>
+
+  <h2 id="estimulo">3. Estimular sin dañar</h2>
+  <h3>Electrodos</h3>
+  <p>Los electrodos son la interfaz con el tejido y hay varios tipos. Dos que anoté: los de tipo <b>esposa</b> (<i>cuff</i>), que agarran al tejido como un abrazo, y los de marcapasos, que se fijan como un <b>arpón</b>. La estimulación va desde unos <b>100 µA hasta decenas de mA</b>, con un pulso o un tren de pulsos de duraciones de varios cientos de microsegundos.</p>
+  <h3>El problema: iones y electrólisis</h3>
+  <p>En el medio biológico <b>la corriente se conduce por iones</b>, no por electrones. Si se pasa corriente continua por el tejido se produce <b>electrólisis</b>, y si dura en el tiempo provoca un daño irreversible. Además, al estimular un tejido se acumula carga, que genera campos en el tejido y que, si no se trabaja bien, puede dañar al paciente.</p>
+  <h3>La solución: carga neutra</h3>
+  <p>Para evitarlo se regula la carga que se manda: el pulso es <b>bifásico</b>, primero una tensión positiva y luego una negativa, de modo que el <b>promedio de la carga sea cero</b>. La regla práctica es la que me quedó anotada: mando un coulomb y devuelvo uno. Se mandan cargas y se las llama de vuelta rápido para balancearlas.</p>
+  <figure class="fig"><img src="../assets/eamta/pulso-bifasico.svg" alt="Pulso bifásico con áreas iguales de carga positiva y negativa, y una zona de blanking"><figcaption>Las dos áreas son iguales. Diagrama propio, conceptual.</figcaption></figure>
+  <p>Aun así, un balance perfecto es difícil, así que cada tanto se hace un <b>blanking</b>: se lleva el electrodo a una tensión conocida para eliminar toda la carga que se haya ido acumulando. También existe el <b>balance de carga pasivo</b>: darle al capacitor un camino para que se descargue, de forma parecida al sistema de precarga y descarga del pack del auto de FSAE, pero acá se busca que el sistema se descargue <b>lentamente</b>.</p>
+
+  <h2 id="energia">4. De dónde sale la energía</h2>
+  <h3>Baterías</h3>
+  <table class="t">
+    <tr><th>Tipo</th><th>Características</th></tr>
+    <tr><td><b>Primarias</b> (no recargables)</td><td>Las más seguras. Se usan de <b>litio-yodo</b>, de unos 2,8 V. A medida que se consume, la tensión baja y la <b>resistencia interna sube</b>, de decenas de miliohms a kiloohms.</td></tr>
+    <tr><td><b>Secundarias</b> (recargables)</td><td>Impedancia de salida mucho menor, pero una densidad de energía mucho menor.</td></tr>
+  </table>
+  <p>Esa resistencia interna creciente es una restricción de diseño: la batería ya no puede entregar corrientes altas al final de su vida, así que el circuito tiene que tolerarlo.</p>
+  <h3>Subir y bajar tensión</h3>
+  <p>La estimulación suele necesitar más tensión de la que da la batería, así que hacen falta elevadores y reductores. Vimos dos familias:</p>
+  <table class="t">
+    <tr><th>Familia</th><th>Cómo funciona</th><th>Cuándo conviene</th></tr>
+    <tr><td><b>Inductores conmutados</b></td><td>Almacenan energía en un inductor.</td><td>Componentes más discretos y alta frecuencia. Buena eficiencia con corrientes elevadas.</td></tr>
+    <tr><td><b>Capacitores conmutados</b> (<i>charge pump</i>, bombas de carga)</td><td>Cargo los capacitores en paralelo y luego los pongo en serie.</td><td>Mucho más eficientes con corrientes bajas, pero solo eficientes para <b>múltiplos de la tensión de entrada</b>.</td></tr>
+  </table>
+  <p>En estos sistemas, la corriente de cortocircuito en la conmutación se minimiza <b>desde el diseño de los MOS</b>: el efecto ocurre, pero se vuelve despreciable. Por eso, a diferencia de un inverter, acá no se ajusta un <i>dead-time</i>.</p>
+
+  <h2 id="hv">5. Alta tensión: una definición que depende del contexto</h2>
+  <p>En electrónica, "alta tensión" no significa lo mismo en todos lados. Cada área la define según lo que está en juego:</p>
+  <table class="t">
+    <tr><th>Contexto</th><th>Qué se llama alta tensión</th></tr>
+    <tr><td><b>Instalaciones eléctricas</b></td><td>Se suele hablar de alta tensión a partir de unos <b>36 kV</b>.</td></tr>
+    <tr><td><b>Electrónica de IoT y embebidos</b></td><td>Se le llama alta tensión a la <b>tensión de red, 220 V</b>.</td></tr>
+    <tr><td><b>Dispositivos implantables</b></td><td>Alta tensión son <b>unos pocos volts</b>.</td></tr>
+  </table>
+  <p>¿Por qué en los implantables un valor tan chico ya es "alta tensión"? Porque dentro del cuerpo <b>unos pocos volts pueden ser mortales</b>. Afuera, la piel seca ofrece una resistencia alta que limita la corriente. Adentro no existe esa barrera, y un electrodo apoyado sobre el corazón entrega corriente directo al tejido. En esas condiciones, corrientes muy chicas pueden desencadenar una fibrilación. Por eso las normas de equipos médicos limitan la corriente de fuga en las partes que tocan el corazón a valores del orden de decenas de microamperes. La referencia de seguridad no es la tensión de una instalación sino lo que le pasa a un tejido vivo.</p>
+  <h3>Y el chip: alta tensión como tecnología</h3>
+  <p>Hay una segunda acepción, la del proceso de fabricación. Por el grosor del óxido de silicio, un transistor CMOS no puede soportar alta tensión en el <i>gate</i>, pero sí en el <i>drain</i>, con técnicas de diseño. La tecnología de <b>alta tensión (HV)</b> se construye principalmente sobre <b>SOI</b>, y lo típico no pasa de unos <b>50 V</b>; hay casos especiales, pero normalmente se trabaja en ese rango.</p>
+  <p>Las dos definiciones conviven. Para el proceso, 50 V es el límite de lo que el chip aguanta. Para el paciente, la alerta empieza muchísimo antes: cualquier nodo del circuito que pueda llegar a unos pocos volts sobre el tejido se trata con el cuidado de un circuito de alta tensión.</p>
+
+  <h2 id="seguridad">6. Seguridad</h2>
+  <ul>
+    <li><b>Protecciones ESD (TVS)</b> en todos lados, para descargas electrostáticas.</li>
+    <li><b>Análisis de seguridad acotado:</b> en vez de analizar todo el circuito, se analiza la seguridad de los <b>transistores de salida</b>, que son los que están conectados al paciente. Por ejemplo, con un elevador de tensión no se analiza todo el circuito sino solo el transistor de salida.</li>
+    <li><b>Carga neutra y blanking</b>, como se vio en la sección 3.</li>
+  </ul>
+
+  <h2 id="llevo">7. Qué me llevé</h2>
+  <p>Vengo de la electrónica de potencia, y el curso me mostró el mismo vocabulario (conversión, eficiencia, protección, carga y descarga de capacitores, tiempo muerto) pero con otras prioridades: ahí, el consumo y la seguridad del paciente mandan sobre casi todo lo demás. Es el extremo opuesto del inverter de cientos de kilowatts, y por eso mismo cambia la forma de pensar un diseño.</p>
+
+  <div class="pager"><a href="../index.html#proyectos">← Todos los proyectos</a><a href="../cv.html">Ver CV →</a></div>
+</article></main>
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span></div></footer>
+</body>
+</html>

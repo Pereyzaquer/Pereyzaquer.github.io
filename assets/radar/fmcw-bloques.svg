@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" font-family="system-ui, Segoe UI, Arial, sans-serif" font-size="13">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1d1b18"/></marker><marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#b4441c"/></marker></defs>
+<rect width="760" height="330" rx="10" fill="#fdfbf7" stroke="#d9d3c5"/>
+<text x="380" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1d1b18">Bloques de un radar FMCW</text>
+<rect x="20" y="60" width="110" height="56" rx="6" fill="#ece7db" stroke="#6b665d" stroke-width="1.5"/>
+<text x="75" y="84" text-anchor="middle" font-weight="600" fill="#1d1b18">Rampa</text>
+<text x="75" y="102" text-anchor="middle" font-size="11" fill="#6b665d">señal de control</text>
+<rect x="165" y="60" width="90" height="56" rx="6" fill="#f0dcd2" stroke="#b4441c" stroke-width="1.5"/>
+<text x="210" y="84" text-anchor="middle" font-weight="600" fill="#1d1b18">VCO</text>
+<text x="210" y="102" text-anchor="middle" font-size="11" fill="#6b665d">barre la frecuencia</text>
+<rect x="290" y="60" width="110" height="56" rx="6" fill="#f0dcd2" stroke="#b4441c" stroke-width="1.5"/>
+<text x="345" y="84" text-anchor="middle" font-weight="600" fill="#1d1b18">Amplificador</text>
+<text x="345" y="102" text-anchor="middle" font-size="11" fill="#6b665d">de potencia (PA)</text>
+<rect x="435" y="60" width="120" height="56" rx="6" fill="#f0dcd2" stroke="#b4441c" stroke-width="1.5"/>
+<text x="495" y="84" text-anchor="middle" font-weight="600" fill="#1d1b18">Acoplador</text>
+<text x="495" y="102" text-anchor="middle" font-size="11" fill="#6b665d">≈ −15 dB hacia el LO</text>
+<rect x="590" y="60" width="150" height="56" rx="6" fill="#dde6f0" stroke="#3d5a80" stroke-width="1.5"/>
+<text x="665" y="84" text-anchor="middle" font-weight="600" fill="#1d1b18">Antena TX</text>
+<text x="665" y="102" text-anchor="middle" font-size="11" fill="#6b665d">banda ancha</text>
+<line x1="130" y1="88" x2="163" y2="88" stroke="#1d1b18" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="255" y1="88" x2="288" y2="88" stroke="#1d1b18" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="400" y1="88" x2="433" y2="88" stroke="#1d1b18" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="555" y1="88" x2="588" y2="88" stroke="#1d1b18" stroke-width="1.6" marker-end="url(#a)"/>
+<rect x="590" y="210" width="150" height="56" rx="6" fill="#dde6f0" stroke="#3d5a80" stroke-width="1.5"/>
+<text x="665" y="234" text-anchor="middle" font-weight="600" fill="#1d1b18">Antena RX</text>
+<text x="665" y="252" text-anchor="middle" font-size="11" fill="#6b665d">banda ancha</text>
+<rect x="435" y="210" width="120" height="56" rx="6" fill="#fdfbf7" stroke="#1d1b18" stroke-width="1.5"/>
+<text x="495" y="234" text-anchor="middle" font-weight="600" fill="#1d1b18">LNA</text>
+<text x="495" y="252" text-anchor="middle" font-size="11" fill="#6b665d">amplificador de bajo ruido</text>
+<rect x="290" y="210" width="110" height="56" rx="6" fill="#fdfbf7" stroke="#1d1b18" stroke-width="1.5"/>
+<text x="345" y="234" text-anchor="middle" font-weight="600" fill="#1d1b18">Mezclador</text>
+<text x="345" y="252" text-anchor="middle" font-size="11" fill="#6b665d">RX × LO</text>
+<rect x="125" y="210" width="130" height="56" rx="6" fill="#fdfbf7" stroke="#1d1b18" stroke-width="1.5"/>
+<text x="190" y="234" text-anchor="middle" font-weight="600" fill="#1d1b18">Filtro y amp.</text>
+<text x="190" y="252" text-anchor="middle" font-size="11" fill="#6b665d">señal de batido</text>
+<rect x="20" y="210" width="70" height="56" rx="6" fill="#ece7db" stroke="#6b665d" stroke-width="1.5"/>
+<text x="55" y="242" text-anchor="middle" font-weight="600" fill="#1d1b18">ADC</text>
+<line x1="588" y1="238" x2="557" y2="238" stroke="#1d1b18" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="433" y1="238" x2="402" y2="238" stroke="#1d1b18" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="288" y1="238" x2="257" y2="238" stroke="#1d1b18" stroke-width="1.6" marker-end="url(#a)"/>
+<line x1="123" y1="238" x2="92" y2="238" stroke="#1d1b18" stroke-width="1.6" marker-end="url(#a)"/>
+<path d="M 495 116 L 495 160 L 345 160 L 345 208" fill="none" stroke="#b4441c" stroke-width="1.8" marker-end="url(#b)"/>
+<text x="420" y="153" text-anchor="middle" font-size="12" fill="#b4441c">oscilador local (LO)</text>
+<text x="380" y="304" text-anchor="middle" font-size="11.5" fill="#6b665d">La salida del mezclador tiene una frecuencia proporcional a la distancia del objetivo.</text>
+</svg>

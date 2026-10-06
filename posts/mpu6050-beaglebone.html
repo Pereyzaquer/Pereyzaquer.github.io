@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desarrollo de drivers para Linux · Nicolás Pereyra</title>
+<meta name="description" content="Cómo leí un sensor MPU6050 desde un driver de kernel propio en una BeagleBone Black y publiqué los datos con un servidor TCP.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css?v=2">
+<style>
+  article pre { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; font: 13px/1.55 var(--mono); margin: 20px 0; }
+  article code { font: 0.88em var(--mono); background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; border-radius: 3px; }
+  article pre code { border: 0; padding: 0; background: none; font-size: inherit; }
+  article h3 { font: 600 19px/1.3 var(--serif); margin: 28px 0 8px; }
+  .fig img { background: #fdfbf7; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 15px; margin: 20px 0; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.t th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .toc { font: 14px/1.9 var(--mono); }
+  .toc a { color: var(--muted); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .codecap { font: 500 12px var(--mono); color: var(--muted); margin: 22px 0 -10px; }
+  .next { font: 500 14px var(--mono); color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; margin-top: 36px; }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="../index.html">npp<span>/</span>portfolio</a>
+  <nav><a href="../index.html#proyectos" aria-current="page">proyectos</a><a href="../cv.html">cv</a></nav>
+</div></header>
+<main class="wrap"><article>
+  <p class="eyebrow">2025 · Linux embebido · BeagleBone Black (AM335x) · Driver de kernel en C</p>
+  <h1>Desarrollo de drivers para Linux</h1>
+  <p class="meta">Leer un sensor dentro de un sistema gigante, con un driver para el MPU6050 · Código: <a href="https://github.com/Pereyzaquer/Sistem-Operativo-ByNico/tree/main/driver-linux-mpu6050">Sistem-Operativo-ByNico / driver-linux-mpu6050</a></p>
+
+  <p>En el proyecto anterior construí un sistema operativo desde cero. Este es el lado opuesto: <b>meterme en un sistema que ya existe</b>, enorme, y hacer que haga algo nuevo. La tarea es simple de decir: leer un sensor (un <b>MPU6050</b>, acelerómetro, giroscopio y temperatura) en una <b>BeagleBone Black</b> y transmitir los datos por red con un servidor. Lo difícil es todo lo que hay en el medio.</p>
+
+  <h2 id="dificil">¿Por qué es más complejo que hacerlo desde cero?</h2>
+  <p>Cuando construís todo vos, tenés libertad total: elegís cómo se organiza la memoria, dónde va cada cosa y podés acomodar el sistema para que las cosas funcionen de la forma más directa. En un microcontrolador simple, leer un periférico se resume en habilitar unos registros y listo.</p>
+  <p>En Linux no. El kernel ya tiene sus reglas, sus abstracciones y sus propios dueños del hardware. Para leer un sensor hay que <b>activar y validar todo un sistema</b> y tocar registros de varios bloques distintos, respetando cómo Linux se organiza. El sistema resultante es simple. Lo complejo es el desarrollo interno de cada pieza.</p>
+
+  <p class="toc">
+    <a href="#resumen">1. Qué armé</a><br>
+    <a href="#archivos">2. En Linux, todo es un archivo</a><br>
+    <a href="#dispositivos">3. Qué es un char device y qué otros tipos hay</a><br>
+    <a href="#paja">4. Por qué fue tan trabajoso</a><br>
+    <a href="#mapa">5. Mis archivos: dónde van y qué modifican</a><br>
+    <a href="#driver">6. Cómo funciona el driver</a><br>
+    <a href="#servidor">7. Del archivo a la red: el servidor</a><br>
+    <a href="#probar">8. Cómo lo probé</a>
+  </p>
+
+  <h2 id="resumen">1. Qué armé</h2>
+  <p>Cuatro piezas, de abajo hacia arriba:</p>
+  <ul>
+    <li><b>Un driver de kernel</b> (<code>mpu6050_driver.ko</code>) que habla con el controlador I²C de la placa, configura el sensor y expone <code>/dev/mpu6050</code>.</li>
+    <li><b>Un Device Tree Overlay</b> que le dice al kernel que ese controlador lo maneja mi driver.</li>
+    <li><b>Un programa de prueba</b> en espacio de usuario que lee el dispositivo y muestra los valores en unidades físicas (g, °/s, °C).</li>
+    <li><b>Un servidor TCP concurrente</b> que lee el dispositivo, filtra las muestras y las publica como página web con gráficos, stream en vivo y un protocolo binario.</li>
+  </ul>
+  <p>Una aclaración: el sensor usa el bus <b>I²C</b> (dos cables, SDA y SCL), que no hay que confundir con I²S, el bus de audio.</p>
+  <figure class="fig"><img src="../assets/bbb/flujo-datos.svg" alt="Camino de un dato del MPU6050 al navegador, pasando por I2C, el driver de kernel y el servidor"><figcaption>El recorrido completo de una muestra. Diagrama propio.</figcaption></figure>
+  <p class="next">Antes de entrar al driver hace falta entender por qué el resultado se ve como un archivo, y no como una función.</p>
+
+  <h2 id="archivos">2. En Linux, todo es un archivo</h2>
+  <p>La idea central de Unix y Linux es que casi todo se usa con las mismas cinco operaciones: <code>open</code>, <code>read</code>, <code>write</code>, <code>ioctl</code> y <code>close</code>. Un texto en disco, un pendrive, una consola, un socket de red o un sensor se manejan igual. El programa no tiene que saber qué hay del otro lado: el kernel, a través del <b>VFS</b> (Virtual File System), mira qué tipo de archivo es y pasa la llamada a quien corresponda.</p>
+  <figure class="fig"><img src="../assets/bbb/todo-es-archivo.svg" alt="El VFS deriva open, read, write, ioctl y close según el tipo de archivo"><figcaption>La misma interfaz, distintos destinos.</figcaption></figure>
+
+  <h3>Los tipos de archivo</h3>
+  <p>El primer carácter de <code>ls -l</code> dice de qué tipo es cada uno:</p>
+  <table class="t">
+    <tr><th>Letra</th><th>Tipo</th><th>Qué es y ejemplo</th></tr>
+    <tr><td><code>-</code></td><td>Regular</td><td>Bytes guardados en un sistema de archivos: texto, ejecutables, imágenes.</td></tr>
+    <tr><td><code>d</code></td><td>Directorio</td><td>Un archivo cuyo contenido es una lista de nombres.</td></tr>
+    <tr><td><code>l</code></td><td>Enlace simbólico</td><td>Un archivo que apunta a otro.</td></tr>
+    <tr><td><code>c</code></td><td>Dispositivo de carácter</td><td>Un flujo de bytes que atiende un driver, sin acceso aleatorio: teclado, puertos serie y <b>/dev/mpu6050</b>.</td></tr>
+    <tr><td><code>b</code></td><td>Dispositivo de bloque</td><td>Almacenamiento accedido por bloques: discos, tarjetas SD, como <code>/dev/mmcblk0</code>.</td></tr>
+    <tr><td><code>s</code></td><td>Socket</td><td>Punta de una comunicación de red o local.</td></tr>
+    <tr><td><code>p</code></td><td>Pipe (FIFO)</td><td>Un canal para pasar bytes entre procesos.</td></tr>
+  </table>
+  <p>Además hay archivos <b>virtuales</b>: <code>/proc</code> y <code>/sys</code> no están en ningún disco, el kernel los genera al momento y sirven para leer y modificar su estado como si fueran texto.</p>
+
+  <h3>Cómo se enlaza un archivo con un driver</h3>
+  <p>Un dispositivo de carácter no lleva contenido: lleva dos números, <b>mayor</b> y <b>menor</b>. El mayor identifica al driver y el menor a cuál de sus dispositivos. Cuando un programa hace <code>open("/dev/mpu6050")</code>, el kernel busca ese par y llama a las funciones que el driver registró en su estructura <code>file_operations</code>: <code>open</code>, <code>read</code>, <code>write</code>, <code>unlocked_ioctl</code> y <code>release</code>. En mi driver es exactamente eso: <code>read()</code> del programa termina ejecutando <code>dev_read()</code> dentro del kernel, donde se habla con el sensor.</p>
+  <p class="codecap">Extracto de <code>scr/mpu6050_driver.c</code></p>
+  <pre><code class="language-c">static const struct file_operations fops = {
+    .owner = THIS_MODULE,
+    .open = dev_open,
+    .read = dev_read,
+    .write = dev_write,
+    .unlocked_ioctl = dev_ioctl,
+    .release = dev_release,
+};</code></pre>
+
+  <p><code>ioctl</code> es la puerta para todo lo que no encaja en leer o escribir bytes. Mi driver la usa para preguntar cuántas lecturas se hicieron desde que se cargó el módulo.</p>
+  <p class="next">Desde arriba, el sensor es un archivo. Pero un dispositivo de carácter es solo una de las formas que tiene Linux de mostrar hardware. Vale la pena ver cuáles hay.</p>
+
+
+  <h2 id="dispositivos">3. Qué es un char device y qué otros tipos hay</h2>
+  <p>Linux clasifica los dispositivos según <b>cómo se accede a sus datos</b>. Hay tres familias, y elegir la correcta es una de las primeras decisiones al escribir un driver.</p>
+
+  <h3>Dispositivo de carácter (char device)</h3>
+  <p>Es un dispositivo cuyos datos se tratan como un <b>flujo de bytes</b>, leídos y escritos en orden, sin una estructura de bloques. Cada <code>read()</code> o <code>write()</code> del programa llega <b>directo al driver</b>, que decide qué hacer: devolver lo que tenga, esperar a que haya algo o rechazar la operación. No pasa por la caché de bloques del kernel.</p>
+  <p>Ejemplos típicos: un teclado, un mouse, un puerto serie (<code>/dev/ttyS0</code>), <code>/dev/null</code>, <code>/dev/random</code> y la mayoría de los sensores. El MPU6050 es un caso claro: entrega un flujo de muestras a medida que las mide. No existe algo como "leer el bloque número 5 del sensor", y es el driver el que decide bloquear al programa hasta que haya una muestra nueva.</p>
+  <p>Así se crea uno, y es lo que hace la función <code>mpu6050_init()</code> de mi módulo:</p>
+  <ol>
+    <li><code>alloc_chrdev_region()</code> reserva un número <b>mayor</b> y <b>menor</b> para el dispositivo.</li>
+    <li><code>cdev_init()</code> y <code>cdev_add()</code> asocian ese número con mi tabla de funciones (<code>file_operations</code>: <code>open</code>, <code>read</code>, <code>write</code>, <code>ioctl</code>, <code>release</code>).</li>
+    <li><code>class_create()</code> y <code>device_create()</code> registran el dispositivo en <code>/sys/class/</code> y avisan al espacio de usuario (<i>uevent</i>). El sistema de dispositivos (<code>udev</code> o <code>devtmpfs</code>) recibe el aviso y crea el archivo <code>/dev/mpu6050</code>.</li>
+  </ol>
+  <p>En el código de <code>mpu6050_init()</code> son estas llamadas (recorté el manejo de errores, que en el original libera en orden inverso lo ya reservado):</p>
+  <p class="codecap">Extracto de <code>mpu6050_init()</code></p>
+  <pre><code class="language-c">ret = alloc_chrdev_region(&amp;driver.dev_num, MENOR, CANT_DISP, DEVICE_NAME);
+
+driver.c_dev = cdev_alloc();
+cdev_init(driver.c_dev, &amp;fops);                  // le asigno las file_operations
+ret = cdev_add(driver.c_dev, driver.dev_num, CANT_DISP);
+
+driver.class_ptr = class_create(CLASS_NAME);
+driver.class_ptr-&gt;dev_uevent = dev_uevent;       // se ejecuta cuando device_create sale bien
+driver.device_ptr = device_create(driver.class_ptr, NULL, driver.dev_num, NULL, DEVICE_NAME);
+
+ret = platform_driver_register(&amp;mpu6050_platform_driver);</code></pre>
+
+  <p>Mi driver también manda en ese aviso los permisos <code>0666</code>, para que cualquier usuario pueda abrir el dispositivo sin <code>sudo</code>.</p>
+  <p class="codecap">Extracto de <code>dev_uevent()</code></p>
+  <pre><code class="language-c">static int dev_uevent(const struct device *dev, struct kobj_uevent_env *env)
+{
+    (void)dev;
+    add_uevent_var(env, "DEVMODE=%#o", 0666);   // Le doy permisos de lectura y escritura a todos
+    return 0;
+}</code></pre>
+
+
+  <h3>Dispositivo de bloque</h3>
+  <p>Sus datos son bloques de tamaño fijo (512 bytes, 4 KiB…) con <b>acceso aleatorio</b>: se puede pedir cualquier bloque en cualquier orden. El kernel intercala una <b>caché</b> y un <b>planificador de E/S</b> que reordena y agrupa las operaciones, y sobre el dispositivo se monta un sistema de archivos. Ejemplos: discos, pendrives y tarjetas SD (<code>/dev/sda</code>, <code>/dev/mmcblk0</code> y sus particiones). En la propia BeagleBone, la memoria eMMC y la microSD son dispositivos de bloque.</p>
+
+  <h3>Dispositivo de red</h3>
+  <p>Maneja <b>paquetes</b>, no bytes ni bloques. Es la excepción a la regla "todo es un archivo": <b>no tiene nodo en <code>/dev</code></b>. Aparece como interfaz (<code>eth0</code>, <code>wlan0</code>, visible con <code>ip link</code>) y los programas la usan a través de <i>sockets</i>. El driver recibe y entrega paquetes al stack de red del kernel.</p>
+
+  <table class="t">
+    <tr><th></th><th>Carácter</th><th>Bloque</th><th>Red</th></tr>
+    <tr><td><b>Unidad de datos</b></td><td>Flujo de bytes</td><td>Bloques fijos</td><td>Paquetes</td></tr>
+    <tr><td><b>Acceso</b></td><td>Normalmente secuencial</td><td>Aleatorio</td><td>Por sockets</td></tr>
+    <tr><td><b>Nodo en /dev</b></td><td>Sí (<code>c</code>)</td><td>Sí (<code>b</code>)</td><td>No</td></tr>
+    <tr><td><b>Caché del kernel</b></td><td>No</td><td>Sí</td><td>Buffers de red</td></tr>
+    <tr><td><b>Cuándo se usa</b></td><td>Sensores, puertos, teclados, consolas, hardware "a medida"</td><td>Todo almacenamiento sobre el que se monta un sistema de archivos</td><td>Ethernet, WiFi, CAN, interfaces virtuales</td></tr>
+  </table>
+
+  <h3>Dos cosas que conviene no mezclar</h3>
+  <p>En mi módulo aparecen dos conceptos distintos, y confundirlos es fácil:</p>
+  <ul>
+    <li><b>Cómo el kernel encuentra el hardware:</b> lo resuelve el <i>platform driver</i> con el Device Tree. Es el mecanismo que decide cuándo llamar a <code>probe()</code>.</li>
+    <li><b>Cómo lo expone al usuario:</b> lo resuelve el <i>char device</i>. Es el archivo <code>/dev/mpu6050</code>.</li>
+  </ul>
+  <p>Son independientes. Por eso <code>/dev/mpu6050</code> ya existe apenas se carga el módulo, aunque <code>probe()</code> todavía no haya terminado. Ese es el motivo por el que mi <code>open()</code> espera a que <code>probe()</code> termine antes de dejar pasar a nadie.</p>
+
+  <h3>¿Había una forma más simple?</h3>
+  <p>Sí, y conviene saberlo. Lo que hice es la forma "manual" de crear un char device. Linux ofrece atajos y subsistemas ya armados:</p>
+  <table class="t">
+    <tr><th>Opción</th><th>Qué es</th><th>Cuándo usarla</th></tr>
+    <tr><td><code>misc_register()</code></td><td>Registra un char device con un solo llamado (mayor fijo 10).</td><td>Un dispositivo simple, sin necesidad de administrar números ni clases.</td></tr>
+    <tr><td>Subsistema <b>IIO</b></td><td>Framework para sensores (acelerómetros, giroscopios, conversores A/D). Entrega los datos por <code>/sys/bus/iio</code> y buffers estándar.</td><td>Justamente el caso de un MPU6050.</td></tr>
+    <tr><td>Subsistema <b>input</b></td><td>Eventos de teclados, mouses, pantallas táctiles (<code>/dev/input/eventX</code>).</td><td>Dispositivos que generan eventos de entrada.</td></tr>
+    <tr><td><code>/dev/i2c-N</code> (i2c-dev)</td><td>Expone el bus I²C entero a espacio de usuario.</td><td>Prototipar hablando con el sensor desde un programa común, sin driver. Pierde las interrupciones y el tiempo real.</td></tr>
+  </table>
+  <p>De hecho, el kernel de Linux ya trae un driver para el MPU6050 dentro del subsistema IIO (<code>inv_mpu6050</code>). En un producto real correspondería usarlo. Escribir el mío, desde el controlador I²C hacia arriba, fue la forma de entender cada capa que ese driver oculta. Elegí el camino de char device manual justamente porque muestra todas las piezas.</p>
+  <p class="next">Ya sabemos qué tipo de dispositivo armé. Ahora, lo que hay que hacer para que exista.</p>
+
+  <h2 id="paja">4. Por qué fue tan trabajoso</h2>
+  <p>Para que <code>read()</code> devuelva un dato del sensor hay que dejar funcionando, en orden, cinco capas. Cada una tiene su propio manual, su propio error posible y ninguna avisa claramente cuando falla.</p>
+  <ol>
+    <li><b>El Device Tree.</b> Linux en ARM no descubre el hardware solo: lo lee de un árbol de descripción. Mi driver no es un cliente I²C común sino un <i>platform driver</i> que maneja el controlador entero, así que escribí un <b>overlay</b> que reemplaza el <code>compatible</code> del nodo I2C2 por <code>"i2c_mpu6050"</code>. Con eso el driver estándar del kernel deja de manejar ese controlador y lo toma el mío. El overlay también pasa configuración: frecuencia de muestreo (200 Hz), filtro digital, rango del giroscopio (±1000 °/s) y del acelerómetro (±2 g).</li>
+    <li><b>El reloj del módulo.</b> El controlador I2C2 arranca apagado para ahorrar energía. Hay que escribir en <code>CM_PER_I2C2_CLKCTRL</code> para habilitarlo y <i>esperar</i> a que el campo IDLEST indique "funcional". Acceder a un módulo sin reloj puede terminar en un <i>external abort</i> del procesador.</li>
+    <li><b>El multiplexado de pines.</b> Los pines P9_19 y P9_20 sirven para varias funciones. Hay que configurar, en el Control Module, el modo I²C con pull-up.</li>
+    <li><b>El controlador I²C.</b> Con el reloj y los pines listos se programa el prescaler y los tiempos alto y bajo de SCL para 100 kHz, se habilita el módulo y se carga la dirección del esclavo (<code>0x68</code>, o <code>0x69</code> si el sensor no responde).</li>
+    <li><b>Las interrupciones.</b> Cada paso de una transferencia (dirección enviada, byte listo para leer o escribir, NACK, bus libre) llega como una interrupción. El driver tiene que atenderlas y coordinarse con quien está esperando.</li>
+  </ol>
+  <p>Recién con las cinco capas funcionando se llega al sensor: verificar que responde leyendo <code>WHO_AM_I</code>, resetearlo, sacarlo del modo sleep, configurar rangos y activar su FIFO.</p>
+  <p>Así se ven las dos primeras capas en el código. Primero el overlay, que pisa el <code>compatible</code> del nodo del I2C2 y pasa la configuración del sensor:</p>
+  <p class="codecap">Extracto de <code>mpu6050_npp.dts</code></p>
+  <pre><code class="language-dts">fragment@1 {
+    target-path = "/ocp/interconnect@48000000/segment@100000/target-module@9c000";
+    __overlay__ {
+        i2c@0 {
+            compatible = "i2c_mpu6050";
+            status = "okay";
+
+            mpu6050,sample-rate-hz = &lt;200&gt;; /* SampleRate = GyroRate/(1+SMPLRT_DIV) */
+            mpu6050,dlpf-cfg = &lt;0&gt;;         /* CONFIG.DLPF_CFG (0..7) */
+            mpu6050,gyro-fs = &lt;2&gt;;          /* 0=250,1=500,2=1000,3=2000 dps */
+            mpu6050,accel-fs = &lt;0&gt;;         /* 0=2g,1=4g,2=8g,3=16g */
+        };
+    };
+};</code></pre>
+
+  <p>Después, en <code>i2c2_config()</code>: se enciende el reloj del módulo, se <b>espera</b> a que esté funcional, se configuran los pines y se programan los tiempos del bus para 100 kHz.</p>
+  <p class="codecap">Extracto resumido de <code>i2c2_config()</code> (sin los mensajes de debug)</p>
+  <pre><code class="language-c">value = ioread32(driver.per_cm_i2c2_clkctrl);
+value |= CM_PER_I2C2_CLKCTRL_MODULEMODE_ENABLE;         // MODULEMODE = ENABLE
+iowrite32(value, driver.per_cm_i2c2_clkctrl);
+
+/* Esperar a que el módulo esté funcional (IDLEST[17:16] == 0) */
+do {
+    value = ioread32(driver.per_cm_i2c2_clkctrl);
+    if (((value &amp; CM_PER_I2C2_CLKCTRL_IDLEST_MASK) &gt;&gt; CM_PER_I2C2_CLKCTRL_IDLEST_SHIFT)
+            == CM_PER_I2C2_CLKCTRL_IDLEST_FUNC)
+        break;
+    udelay(I2C2_CLK_POLL_DELAY_US);
+} while (--attempts);
+
+iowrite32(CONTROL_MODULE_CONF_I2C2_PRESET, driver.conf_i2c2_sda);   // pines SDA y SCL
+iowrite32(CONTROL_MODULE_CONF_I2C2_PRESET, driver.conf_i2c2_scl);
+
+iowrite32(PRESCALER_VALUE_100k, driver.i2c_module + MODULE_I2C_PSC_OFFSET);
+iowrite32(I2C_SCLH_100K,        driver.i2c_module + MODULE_I2C_SCLH_OFFSET);
+iowrite32(I2C_SCLL_100K,        driver.i2c_module + MODULE_I2C_SCLL_OFFSET);
+
+value = ioread32(driver.i2c_module + MODULE_I2C_CON_OFFSET);
+value |= I2C_CON_I2C_EN;                                // habilito el módulo I2C
+iowrite32(value, driver.i2c_module + MODULE_I2C_CON_OFFSET);</code></pre>
+
+
+  <h3>Además: programar dentro del kernel</h3>
+  <ul>
+    <li><b>No hay librería estándar.</b> No hay <code>printf</code> ni <code>malloc</code>: se usa <code>pr_info</code>, <code>kmalloc</code>, <code>ioremap</code>.</li>
+    <li><b>Un puntero de usuario no es confiable.</b> Los datos se copian con <code>copy_to_user</code>; un puntero mal usado es un fallo de seguridad o un cuelgue.</li>
+    <li><b>Un error rompe todo el sistema.</b> No hay un proceso que se cierra: un acceso inválido en el kernel puede tirar la placa.</li>
+    <li><b>Contextos con reglas distintas.</b> En una interrupción no se puede dormir; en <code>read()</code> sí. Hay que saber en cuál se está.</li>
+    <li><b>Liberar todo en orden inverso.</b> Cada <code>ioremap</code> o <code>request_irq</code> que salió bien hay que deshacerlo si un paso posterior falla. Es mucho código de limpieza.</li>
+  </ul>
+  <p>Un ejemplo concreto: en el código de <code>open()</code> dejé escrito que <b>no se debe tocar el hardware I²C ahí</b>, porque el módulo puede estar sin reloj cuando está ocioso y hacerlo provocó abortos externos. Ese tipo de conocimiento sale de chocarse con el sistema, no de un manual.</p>
+  <p class="next">Con las capas claras, se puede seguir una lectura de punta a punta.</p>
+
+
+  <h2 id="mapa">5. Mis archivos: dónde van y qué modifican</h2>
+  <p>Este proyecto no es un solo programa: son piezas que terminan en <b>lugares distintos del sistema</b>, y cada una cambia algo diferente. Este es el mapa.</p>
+
+  <h3>Lo que escribí</h3>
+  <table class="t">
+    <tr><th>Archivo</th><th>Dónde termina</th><th>Qué modifica y por qué existe</th></tr>
+    <tr><td><code>scr/mpu6050_driver.c</code></td><td>Se compila a <code>mpu6050_driver.ko</code>. <code>make install</code> lo copia a <code>/lib/modules/&lt;versión&gt;/extra/</code> y corre <code>depmod -a</code>.</td><td><b>Agrega código al kernel en ejecución</b>. Al cargarlo (<code>modprobe</code> o <code>insmod</code>) crea el char device, registra el platform driver, pide la interrupción y mapea registros. Se puede quitar con <code>rmmod</code> sin reiniciar.</td></tr>
+    <tr><td><code>inc/ti_bb.h</code></td><td>Se incluye al compilar; no se instala.</td><td>Contiene todo lo específico del <b>chip AM335x</b>: la dirección del reloj del I2C2 (<code>0x44E00044</code>), de los pines P9_19 y P9_20 (<code>0x44E1097C</code>, <code>0x44E10978</code>) y del controlador (<code>0x4819C000</code>) con sus registros. Lo separé del resto para que cambiar de placa signifique cambiar solo este archivo.</td></tr>
+    <tr><td><code>inc/mpu6050.h</code></td><td>Se incluye al compilar.</td><td>Contiene todo lo específico del <b>sensor</b>: direcciones I²C (<code>0x68</code>/<code>0x69</code>), el mapa de registros (<code>WHO_AM_I</code>, <code>PWR_MGMT_1</code>, FIFO…) y sus campos de configuración.</td></tr>
+    <tr><td><code>inc/extras.h</code></td><td>Se incluye al compilar.</td><td>Estructuras compartidas dentro del driver: el estado del driver y el frame de 14 bytes.</td></tr>
+    <tr><td><code>inc/mpu6050_ioctl.h</code></td><td>Se incluye <b>en el kernel y en el programa de usuario</b>.</td><td>Es el <b>contrato</b> entre ambos lados: define los comandos de <code>ioctl</code>. Los dos tienen que ponerse de acuerdo en el número exacto, por eso el mismo archivo se compila en los dos mundos (con <code>#ifdef __KERNEL__</code> para elegir los headers correctos).</td></tr>
+    <tr><td><code>mpu6050_npp.dts</code></td><td>Se compila con <code>dtc</code> a <code>mpu6050_npp.dtbo</code>. <code>make dtbo_install</code> lo copia a <code>/lib/firmware/</code>.</td><td><b>Modifica la descripción del hardware</b> que usa el kernel (el Device Tree): en el nodo <code>i2c@0</code> del I2C2 cambia <code>compatible</code> a <code>"i2c_mpu6050"</code>, lo deja en <code>okay</code> y agrega la configuración del sensor. Sin este archivo mi driver nunca se ejecuta, porque el kernel no sabe que ese hardware le corresponde.</td></tr>
+    <tr><td><code>test/mpu6050_test.c</code></td><td>Binario en <code>bin/mpu6050_test</code>.</td><td>No modifica el sistema. Abre <code>/dev/mpu6050</code>, lee frames y los muestra en unidades físicas. Sirve para probar el driver sin depender del servidor.</td></tr>
+    <tr><td><code>test/server/</code> (<code>td3_server</code> y <code>server.conf</code>)</td><td>Binario en <code>test/server/</code>. La configuración se pasa con <code>-c</code>.</td><td>No modifica el sistema. Abre un puerto TCP (8080 por defecto) y publica los datos. Es un cliente más del dispositivo.</td></tr>
+    <tr><td><code>Makefile</code> (raíz y servidor)</td><td>Solo el repositorio.</td><td>Automatiza compilar, instalar, cargar, recargar y leer logs. Los pasos de instalación escriben en <code>/lib/modules</code> y <code>/lib/firmware</code> (por eso usan <code>sudo</code>).</td></tr>
+  </table>
+
+    <p>El único header que ven el kernel y el programa de usuario a la vez, con el <code>#ifdef</code> que elige qué incluir según quién compila:</p>
+  <p class="codecap">Extracto de <code>inc/mpu6050_ioctl.h</code></p>
+  <pre><code class="language-c">#ifdef __KERNEL__
+#include &lt;linux/ioctl.h&gt;
+#include &lt;linux/types.h&gt;
+typedef __u64 mpu6050_u64;
+#else
+#include &lt;sys/ioctl.h&gt;
+#include &lt;stdint.h&gt;
+typedef uint64_t mpu6050_u64;
+#endif
+
+#define MPU6050_IOCTL_MAGIC 'M'
+#define MPU6050_IOCTL_GET_READ_COUNT   _IOR(MPU6050_IOCTL_MAGIC, 0x01, mpu6050_u64)
+#define MPU6050_IOCTL_RESET_READ_COUNT _IO(MPU6050_IOCTL_MAGIC, 0x02)</code></pre>
+
+  <h3>Lo que aparece sin haberlo escrito</h3>
+  <ul>
+    <li><b><code>/dev/mpu6050</code>:</b> no es un archivo mío. Lo crea el sistema de dispositivos cuando el driver llama a <code>device_create()</code>, y desaparece al descargar el módulo.</li>
+    <li><b><code>/sys/class/i2cMpu6050/</code>:</b> la entrada que crea <code>class_create()</code>. Sirve para inspeccionar el dispositivo desde <code>/sys</code>.</li>
+    <li><b><code>modules.dep</code>:</b> el índice de módulos que actualiza <code>depmod</code>, para que <code>modprobe</code> encuentre mi módulo por nombre.</li>
+  </ul>
+
+  <h3>El orden en que se conectan</h3>
+  <ol>
+    <li>El <b>overlay</b> (<code>.dtbo</code>) actualiza el Device Tree: ahora el nodo del I2C2 dice <code>compatible = "i2c_mpu6050"</code>.</li>
+    <li>El kernel busca un driver que declare ese <code>compatible</code>. El driver estándar de I²C ya no coincide, y el mío sí (lo declaro en <code>of_match_table</code>).</li>
+    <li>Al cargar el <b>módulo</b> (<code>.ko</code>), se llama a <code>probe()</code>, que configura el hardware.</li>
+    <li>El módulo crea el char device y el sistema de dispositivos genera <code>/dev/mpu6050</code>.</li>
+    <li>El <b>programa de prueba</b> y el <b>servidor</b> abren ese archivo y leen.</li>
+  </ol>
+  <p>El paso 2 es esta tabla. Con ella el kernel sabe que un nodo con ese <code>compatible</code> le corresponde a mi driver:</p>
+  <p class="codecap">Extracto de <code>scr/mpu6050_driver.c</code></p>
+  <pre><code class="language-c">static const struct of_device_id mpu6050_of_match[] = {
+    {.compatible = COMPATIBLE},      // "i2c_mpu6050"
+    {},
+};
+
+static struct platform_driver mpu6050_platform_driver = {
+    .driver = {
+        .name = DEVICE_NAME,
+        .of_match_table = of_match_ptr(mpu6050_of_match),
+    },
+    .probe = mpu6050_probe,
+    .remove = mpu6050_remove,
+};</code></pre>
+
+  <p>Un efecto lateral importante del overlay: como el nodo I2C2 pasa a ser de mi driver, <b>ese bus deja de estar disponible para cualquier otro dispositivo I²C</b> mientras el overlay esté activo. Es una decisión consciente, pero conviene tenerla presente.</p>
+  <p>Cómo se aplica el overlay al arrancar (por ejemplo, desde el cargador de arranque) depende de la imagen de Linux que use la placa. Este proyecto llega hasta dejar el <code>.dtbo</code> en <code>/lib/firmware</code>.</p>
+  <p class="next">Con cada archivo ubicado, se puede seguir una lectura de punta a punta dentro del driver.</p>
+
+  <h2 id="driver">6. Cómo funciona el driver</h2>
+  <h3>Al cargar el módulo</h3>
+  <p>El módulo reserva su número mayor/menor, crea la clase y el nodo <code>/dev/mpu6050</code> y se registra como <i>platform driver</i>. Cuando el Device Tree contiene un nodo con el <code>compatible</code> esperado, el kernel llama a <code>probe()</code>, que hace todo lo descrito antes: mapea los registros con <code>ioremap</code>, pide la interrupción, habilita reloj y pines, configura I²C y resetea el sensor.</p>
+
+  <h3>Una transferencia I²C, a mano</h3>
+  <p>No existe una función que lea un registro por mí: hay que armar la transacción sobre el controlador y esperar a que las interrupciones la completen. Escribir un registro del sensor se ve así:</p>
+  <pre><code class="language-c">set_master_transmiter();
+load_cnt(I2C_CNT_TWO_BYTES);          // 2 bytes: dirección de registro + valor
+enable_irqs(ALL_INTERRUPTS);
+data_to_transmit[0] = reg_addr;
+data_to_transmit[1] = val;
+stt_condition_stt_stp();              // START + STOP
+
+wait_event_interruptible_timeout(     // duerme hasta que la IRQ avise
+    wait_queue,
+    (access_ready &amp;&amp; bus_free) || not_ack,
+    TIMEOUT_JIFFIES);</code></pre>
+  <p>Mientras tanto, cada vez que el controlador tiene algo que decir, dispara la interrupción. El manejador lee el registro <code>IRQSTATUS</code>, lo limpia y actúa según los bits: <code>XRDY</code> (listo para enviar el siguiente byte), <code>RRDY</code> (llegó un byte), <code>ARDY</code> (transferencia terminada), <code>NACK</code> (el sensor no respondió), <code>AERR</code> (error de acceso al bus). Al final despierta a quien espera. Si nada ocurre antes del timeout, la función devuelve error en vez de colgarse.</p>
+  <p class="codecap">Extracto resumido de <code>mpu6050_interrupt_handler()</code> (sin los mensajes de debug)</p>
+  <pre><code class="language-c">status = ioread32(data-&gt;i2c_module + MODULE_I2C_IRQSTATUS_OFFSET);
+iowrite32(status, data-&gt;i2c_module + MODULE_I2C_IRQSTATUS_OFFSET);   // limpio los flags
+
+if (status &amp; ARDY_INT_ENABLED) access_ready = true;   // transferencia lista
+if (status &amp; NACK_INT_ENABLED) not_ack = true;        // el sensor no respondió
+if (status &amp; BF_INT_ENABLED)   bus_free = true;
+
+if (status &amp; RRDY_INT_ENABLED) {                      // llegó un byte
+    if (!rx_data_ready) {
+        read_value = ioread32(data-&gt;i2c_module + MODULE_I2C_DATA_OFFSET) &amp; 0xFF;
+        rx_data_ready = true;
+    }
+}
+if (status &amp; XRDY_INT_ENABLED) {                      // listo para enviar el siguiente
+    if (byte_to_transmit &lt; total_bytes_to_transmit) {
+        iowrite32(data_to_transmit[byte_to_transmit++],
+                  data-&gt;i2c_module + MODULE_I2C_DATA_OFFSET);
+    }
+}
+
+wake_up_interruptible(&amp;wait_queue);                   // despierta a quien espera
+return IRQ_HANDLED;</code></pre>
+
+
+  <h3>Leer datos: el FIFO del sensor</h3>
+  <p>En vez de pedir cada valor por separado, el driver activa el <b>FIFO</b> interno del MPU6050 con aceleración, temperatura y giroscopio. Cada muestra ocupa un <b>frame de 14 bytes</b> (6 de aceleración, 2 de temperatura, 6 de giroscopio). En <code>dev_read()</code>:</p>
+  <ol>
+    <li>Configura el FIFO y consulta cuántos bytes tiene acumulados (<code>FIFO_COUNT</code>).</li>
+    <li>Si hay menos de un frame, <b>espera</b> a que llegue: con una interrupción de datos listos si el pin INT del sensor está conectado a un GPIO, o con una espera corta si no.</li>
+    <li>Si el FIFO se desbordó (más de 1024 bytes), resetea el sensor y devuelve error.</li>
+    <li>Lee los bytes por I²C y los copia al usuario con <code>copy_to_user</code>.</li>
+    <li>Si el usuario pidió una cantidad que no es múltiplo de 14, guarda el sobrante para la próxima lectura, así la alineación de frames no se pierde.</li>
+  </ol>
+  <p>La espera del paso 2 y el cálculo de cuántos frames completos se pueden leer, en el código:</p>
+  <p class="codecap">Extracto de <code>dev_read()</code></p>
+  <pre><code class="language-c">/* Espera bloqueante hasta que entre al menos 1 frame (ideal: IRQ DRDY). */
+if (fifo_count &lt; FRAME_LEN) {
+    if (g_drdy_irq_requested) {
+        int w = wait_event_interruptible(fifo_waitq, atomic_xchg(&amp;g_drdy_pending, 0));
+        if (w)
+            return (kvfree(tmp), kvfree(out), -ERESTARTSYS);
+    } else {
+        if (msleep_interruptible(1))
+            return (kvfree(tmp), kvfree(out), -ERESTARTSYS);
+    }
+    continue;
+}
+available_bytes = (size_t)(fifo_count / FRAME_LEN) * (size_t)FRAME_LEN;</code></pre>
+
+  <p>Otros detalles de diseño: <code>open()</code> es <b>exclusivo</b> (un semáforo evita que dos procesos lean a la vez) y existe el <code>ioctl</code> con un contador atómico de lecturas exitosas.</p>
+  <p class="next">Desde acá, todo lo demás vive en espacio de usuario y usa el dispositivo como cualquier archivo.</p>
+
+  <h2 id="servidor">7. Del archivo a la red: el servidor</h2>
+  <p>El servidor (<code>td3_server</code>, en C) lee <code>/dev/mpu6050</code> y lo publica por TCP. Su arquitectura es multiproceso:</p>
+  <ul>
+    <li>El <b>proceso padre</b> escucha en un socket y, por cada cliente que llega, hace <code>fork()</code>.</li>
+    <li>Un <b>proceso "sensor"</b> es el único que lee el dispositivo. Lee lotes de 10 muestras, las convierte a 7 canales de 16 bits y les aplica un <b>filtro de media móvil centrada</b> con ventana configurable, en un archivo aparte (<code>filter.c</code>) compilado con <code>-Ofast</code>.</li>
+    <li>Las muestras, crudas y promediadas, se publican en una <b>memoria compartida</b> (<code>mmap</code> anónimo). Un contador de secuencia, al estilo <i>seqlock</i>, permite que los clientes lean una instantánea consistente sin locks.</li>
+    <li>Cada <b>proceso de cliente</b> solo lee esa memoria: nunca toca el dispositivo.</li>
+  </ul>
+  <p>Cada lectura del dispositivo llega como 14 bytes por muestra, con cada valor en dos bytes (byte alto primero). Este es el paso de bytes a canales de 16 bits:</p>
+  <p class="codecap">Extracto de <code>test/server/scr/mpu6050_func.c</code></p>
+  <pre><code class="language-c">static inline int16_t be16s(const uint8_t *p)
+{
+    return (int16_t)((uint16_t)p[0] &lt;&lt; 8 | (uint16_t)p[1]);
+}
+
+/* Orden fijo del frame FIFO (TEMP habilitada):
+ * 0..5 accel, 6..7 temp, 8..13 gyro */
+out-&gt;ch[0] = be16s(&amp;frame[0]);
+out-&gt;ch[1] = be16s(&amp;frame[2]);
+out-&gt;ch[2] = be16s(&amp;frame[4]);
+out-&gt;ch[3] = be16s(&amp;frame[6]);
+out-&gt;ch[4] = be16s(&amp;frame[8]);
+out-&gt;ch[5] = be16s(&amp;frame[10]);
+out-&gt;ch[6] = be16s(&amp;frame[12]);</code></pre>
+
+  <p>La memoria compartida se protege sin locks con un contador <code>seq</code>. El proceso sensor lo pone en <b>impar</b> mientras escribe y en <b>par</b> cuando termina. Un cliente solo acepta la copia si <code>seq</code> es par y no cambió durante la lectura:</p>
+  <p class="codecap">Extractos de <code>test/server/scr/server.c</code></p>
+  <pre><code class="language-c">/* Escritor (proceso sensor) */
+atomic_fetch_add_explicit(&amp;sh-&gt;seq, 1U, memory_order_acq_rel); // odd
+sh-&gt;raw = *raw;
+sh-&gt;avg = *avg;
+...
+atomic_fetch_add_explicit(&amp;sh-&gt;seq, 1U, memory_order_acq_rel); // even
+
+/* Lector (proceso de cliente) */
+for (;;) {
+    unsigned s1 = atomic_load_explicit(&amp;sh-&gt;seq, memory_order_acquire);
+    if (s1 == 0 || (s1 &amp; 1U)) continue;      // están escribiendo: reintento
+    *raw = sh-&gt;raw;
+    *avg = sh-&gt;avg;
+    unsigned s2 = atomic_load_explicit(&amp;sh-&gt;seq, memory_order_acquire);
+    if (s1 == s2) return 0;                  // copia consistente
+}</code></pre>
+
+  <p>Y el límite de conexiones: se reserva el lugar <i>antes</i> del <code>fork()</code>. Si ya hay demasiados clientes, se cierra el socket.</p>
+  <p class="codecap">Extracto de <code>run_server()</code></p>
+  <pre><code class="language-c">/* Reserva un slot ANTES del fork para evitar carrera con SIGCHLD. */
+int prev = g_sh ? atomic_fetch_add(&amp;g_sh-&gt;active_clients, 1) : 0;
+if (g_sh &amp;&amp; prev &gt;= max_active) {
+    atomic_fetch_sub(&amp;g_sh-&gt;active_clients, 1);
+    close(cfd);
+    continue;
+}
+
+pid_t pid = fork();</code></pre>
+
+  <p>Los clientes se pueden conectar de tres formas:</p>
+  <table class="t">
+    <tr><th>Ruta o protocolo</th><th>Qué devuelve</th></tr>
+    <tr><td><code>GET /</code></td><td>Una página con los valores actuales y gráficos del historial de cada canal, dibujados como polilíneas SVG.</td></tr>
+    <tr><td><code>GET /events</code></td><td>Un stream en vivo (Server-Sent Events).</td></tr>
+    <tr><td>TCP binario</td><td>Por cada byte que manda el cliente, responde 14 enteros de 16 bits: 7 canales crudos y 7 promediados.</td></tr>
+  </table>
+  <p>Otras rutas devuelven errores HTTP: 400 si el método no es <code>GET</code> y 404 si el recurso no existe.</p>
+  <p>La configuración se lee de un archivo de tres líneas (máximo de conexiones activas, backlog y ventana del filtro). Enviando <code>SIGUSR2</code> al proceso se recargan el máximo de conexiones y la ventana sin reiniciarlo.</p>
+  <p>También hay un análisis del ensamblador que genera el compilador para el filtro con <code>-Ofast -S</code>: interesa ver qué parte se vectoriza con instrucciones <b>NEON</b> del Cortex-A8. Los datos son 7 canales, un número incómodo para vectorizar, por eso el análisis está documentado en <code>NEON_analysis.md</code>.</p>
+
+  <h2 id="probar">8. Cómo lo probé</h2>
+  <p>El módulo se compila <i>en la propia BeagleBone</i>, contra los headers de su kernel (<code>/lib/modules/$(uname -r)/build</code>). El <code>Makefile</code> automatiza el ciclo de iteración:</p>
+  <pre><code class="language-sh">make bin          # compila mpu6050_driver.ko
+make dtbo         # compila el overlay con dtc
+make reload       # descarga, instala y carga el módulo
+make follow       # dmesg -w filtrando por [mpu6050]
+make test         # programa de prueba en espacio de usuario
+
+cd test/server &amp;&amp; make
+./td3_server -b 0.0.0.0 -p 8080 -d /dev/mpu6050 -c server.conf
+kill -USR2 $(pidof td3_server)      # recarga la configuración</code></pre>
+  <p>Con el servidor corriendo se abre <code>http://&lt;ip-de-la-placa&gt;:8080</code> desde otra computadora y se ve el dashboard.</p>
+
+  <div class="callout"><p>Lo más valioso de este trabajo fue entender que la complejidad de un sistema grande no está en lo que hace, sino en lo que hay que respetar para poder hacerlo. Todo el código, con el driver, el overlay, el programa de prueba y el servidor, está en <a href="https://github.com/Pereyzaquer/Sistem-Operativo-ByNico/tree/main/driver-linux-mpu6050">Sistem-Operativo-ByNico</a> (carpeta <code>driver-linux-mpu6050</code>).</p></div>
+
+  <div class="pager"><a href="sistema-operativo.html">← Un sistema operativo desde cero</a><a href="../index.html#proyectos">Todos los proyectos →</a></div>
+</article></main>
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span></div></footer>
+<script src="../js/highlight.js" defer></script>
+</body>
+</html>

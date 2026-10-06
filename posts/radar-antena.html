@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Una antena direccional para un radar · Nicolás Pereyra</title>
+<meta name="description" content="Diseño y simulación en Ansys de una antena bowtie con plano reflector y metamaterial para un radar FMCW tipo Coffee Can Radar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css?v=2">
+<style>
+  article h3 { font: 600 19px/1.3 var(--serif); margin: 28px 0 8px; }
+  .fig img { background: #fdfbf7; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0 6px; }
+  .two figure { margin: 0; }
+  .two img { background: #fff; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; display: block; }
+  .two figcaption { font-size: 14px; color: var(--muted); margin-top: 6px; }
+  @media (max-width: 620px) { .two { grid-template-columns: 1fr; } }
+  table.t { border-collapse: collapse; width: 100%; font-size: 15px; margin: 20px 0; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.t th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  article code { font: 0.88em var(--mono); background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; border-radius: 3px; }
+  .eq { font: italic 500 18px/1.6 var(--serif); text-align: center; margin: 20px 0; padding: 12px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; }
+  .toc { font: 14px/1.9 var(--mono); }
+  .toc a { color: var(--muted); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .next { font: 500 14px var(--mono); color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; margin-top: 36px; }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="../index.html">npp<span>/</span>portfolio</a>
+  <nav><a href="../index.html#proyectos" aria-current="page">proyectos</a><a href="../cv.html">cv</a></nav>
+</div></header>
+<main class="wrap"><article>
+  <p class="eyebrow">2025 · Radar FMCW · Antenas · Ansys Electronics</p>
+  <h1>Una antena direccional para un radar tipo Coffee Can</h1>
+  <p class="meta">Diseño y simulación de una bowtie con plano reflector y metamaterial</p>
+
+  <p>El proyecto principal del grupo de investigación era construir un <b>radar tipo Coffee Can Radar</b>: un radar de onda continua que mide la <b>posición y la velocidad</b> de un objeto a partir del retardo entre la onda que sale y la onda reflejada que vuelve. Mi parte dentro del proyecto fue la <b>antena</b>: diseñar una antena <b>direccional</b> que mejorara la focalización del sistema.</p>
+
+  <p class="toc">
+    <a href="#radar">1. Qué es el radar</a><br>
+    <a href="#teoria">2. Cómo mide: de la onda continua al FMCW</a><br>
+    <a href="#bloques">3. Los bloques del radar</a><br>
+    <a href="#antena">4. Mi parte: la antena</a><br>
+    <a href="#d1">5. Primer diseño: bowtie recortada</a><br>
+    <a href="#d2">6. Segundo diseño: bowtie con reflector y metamaterial</a><br>
+    <a href="#comparo">7. Comparación</a><br>
+    <a href="#sim">8. Cómo lo simulé</a>
+  </p>
+
+  <h2 id="radar">1. Qué es el radar</h2>
+  <p>El sistema está inspirado en el <b>Coffee Can Radar</b> (el nombre viene de las antenas de lata de café de la versión original, del MIT) y en el <b>Rabbit Radar</b>. El objetivo del proyecto es tener un radar que pueda ser <b>diseñado y construido por un grupo de cuatro o cinco estudiantes</b>. Trabaja alrededor de <b>1 GHz</b>, y esa decisión tiene varias razones:</p>
+  <ul>
+    <li>Es una <b>banda ISM</b>, de uso libre.</li>
+    <li>Permite fabricar fácilmente las líneas de transmisión de microondas (un cuarto de onda mide unos 40 mm sobre la placa).</li>
+    <li>Se pueden soldar a mano los componentes discretos de terminación y polarización de los amplificadores.</li>
+  </ul>
+
+  <h2 id="teoria">2. Cómo mide: de la onda continua al FMCW</h2>
+  <p>El principio de cualquier radar es emitir una señal electromagnética y medir su reflejo en un objetivo. El reflejo existe porque la superficie metálica dispersa energía en todas las direcciones, y el radar recibe una pequeña parte.</p>
+  <h3>Onda continua simple: velocidad sí, distancia ambigua</h3>
+  <p>El radar más simple emite una onda continua y compara la señal reflejada con la emitida. Como las dos tienen la misma frecuencia, solo difieren en la fase, y de ahí solo se puede estimar la distancia con una ambigüedad:</p>
+  <div class="eq">d = n·λ + λ·φ/(2π)</div>
+  <p>donde <code>n</code> es cualquier entero, <code>λ</code> la longitud de onda y <code>φ</code> la diferencia de fase. La distancia podría ser cualquier múltiplo entero de la longitud de onda, y además el sistema es sensible a los retardos de fase del hardware y a los caminos múltiples. En cambio, la <b>velocidad</b> sí se mide bien con este radar simple, gracias al efecto Doppler: el objeto en movimiento desplaza la frecuencia de la onda reflejada.</p>
+  <div class="eq">Δf = 2·f<sub>0</sub>·v / c</div>
+  <h3>FMCW: modular la frecuencia</h3>
+  <p>La solución a la ambigüedad es un <b>radar de onda continua modulada en frecuencia (FMCW)</b>: en lugar de emitir una frecuencia fija, se <b>barre la frecuencia con una rampa</b>. Cuando la señal vuelve del objetivo, el oscilador ya cambió de frecuencia, así que la señal recibida llega con una <b>frecuencia distinta</b> de la que se está transmitiendo en ese instante. Esa diferencia mide el retardo, y por lo tanto la distancia absoluta, sin ambigüedad:</p>
+  <div class="eq">d = c·Δt / 2 &nbsp;&nbsp;con&nbsp;&nbsp; Δt = Δf / m</div>
+  <p>donde <code>m</code> es la pendiente de la rampa de frecuencia, en Hz/s. El retardo Δt es el tiempo de ida y vuelta, de ahí el factor 2.</p>
+  <figure class="fig"><img src="../assets/radar/fmcw-rampa.svg" alt="Rampa de frecuencia transmitida y reflejada, con el retardo y la frecuencia de batido"><figcaption>La señal reflejada es una copia retrasada de la transmitida. La diferencia de frecuencia entre ambas (f<sub>b</sub>) es proporcional a la distancia. Diagrama propio.</figcaption></figure>
+  <p>Dos resultados prácticos salen de ahí. La frecuencia de batido es <code>f<sub>b</sub> = m·τ = 2·m·d/c</code>, así que despejando se obtiene la distancia. Y la <b>resolución</b> en distancia depende del ancho del barrido <code>B</code>: <code>ΔR = c/(2B)</code>. Con un barrido de 100 MHz, por ejemplo, serían 1,5 m. Por eso el <b>ancho de banda</b> importa tanto, y se vuelve a ver en la antena.</p>
+  <p class="next">Veamos cómo se ordena todo esto en un circuito.</p>
+
+  <h2 id="bloques">3. Los bloques del radar</h2>
+  <p>Un oscilador controlado por tensión (<b>VCO</b>) es barrido entre dos frecuencias por una rampa lineal. Su señal pasa por un <b>amplificador de potencia (PA)</b> y después por un <b>acoplador</b> que la divide: la mayor parte va a la antena transmisora y una fracción, unos 15 dB por debajo, se usa como <b>oscilador local (LO)</b>. La antena receptora alimenta un <b>amplificador de bajo ruido (LNA)</b>, y un <b>mezclador</b> combina esa señal con el LO y la baja a banda base. Se filtra y amplifica, y esa señal de batido es la que se mide.</p>
+  <figure class="fig"><img src="../assets/radar/fmcw-bloques.svg" alt="Diagrama de bloques del radar FMCW: rampa, VCO, amplificador de potencia, acoplador, antenas, LNA, mezclador, filtro y ADC"><figcaption>Bloques de un radar FMCW. Diagrama propio.</figcaption></figure>
+  <p>Una nota de diseño: la relación entre tensión y frecuencia de un VCO no es lineal, por lo que una rampa lineal de control no da un barrido de frecuencia perfectamente lineal. Para un diseño de primer orden, esto se ignora.</p>
+  <p>En el diseño de referencia del radar, las antenas de transmisión y recepción son <b>Vivaldi antípodas</b>, fáciles de construir y de banda ancha. Mi tarea fue explorar una antena distinta, pensada para ganar direccionalidad.</p>
+
+  <h2 id="antena">4. Mi parte: la antena</h2>
+  <p>El objetivo fue elaborar una <b>antena direccional</b> para mejorar la <b>focalización</b>: que la energía se concentre en la dirección del objetivo en vez de repartirse en todas partes.</p>
+  <h3>Qué se le pide a la antena</h3>
+  <p>Según los papers que me dieron, este tipo de antenas se usa mucho en <b>GPR (Ground Penetrating Radar)</b>, y los requisitos se traducen así:</p>
+  <table class="t">
+    <tr><th>Parámetro</th><th>Qué determina</th></tr>
+    <tr><td><b>Frecuencia</b></td><td>La profundidad de penetración. Los objetos a medir suelen ser heterogéneos y con pérdidas, y a frecuencias más altas se obtiene mayor precisión.</td></tr>
+    <tr><td><b>Ancho de banda</b></td><td>La precisión (en un FMCW, la resolución en distancia).</td></tr>
+    <tr><td><b>Ganancia</b></td><td>Que sea alta: cuánto se concentra la energía en la dirección útil.</td></tr>
+  </table>
+  <p>Uno de los papers lista los tipos de antena que cumplen estos requisitos: <b>dipolos, antenas TEM tipo Vivaldi, bowtie, hélices planares y antenas de arco</b>. De las bowtie dice que se usan en radares de amplio rango por su buena pérdida de retorno, alta ganancia, impedancia y estabilidad del diagrama de radiación.</p>
+  <h3>Las opciones</h3>
+  <p>Entre las candidatas, las dos más recomendables eran la <b>Vivaldi</b> y la <b>bowtie</b>. La Vivaldi rinde mejor, pero es más compleja de construir. De la bowtie tenía varios papers que estudian el diseño, lo simulan, lo arman y lo comparan. Me decidí por una <b>bowtie modificada</b>, combinando ideas de dos de esos trabajos:</p>
+  <ul>
+    <li><b>"A 900 MHz Shielded Bow-tie Antenna System for Ground Penetrating Radar"</b> (Chen Guo y Richard C. Liu): me enseñó a <b>centrar la antena en frecuencias cercanas a la de trabajo</b> mediante recortes en los extremos de la bowtie.</li>
+    <li><b>"Directional and High-Gain Ultra-Wideband Bow-Tie Antenna for Ground-Penetrating Radar Applications"</b> (Shuai Pi, Tianhao Wang y Jun Lin): me enseñó a usar <b>metamateriales</b> para mejorar la ganancia y la direccionalidad.</li>
+  </ul>
+  <p>Una <b>bowtie</b> (corbata de moño) es un dipolo plano formado por dos brazos triangulares, alimentado en el centro por el espacio entre ellos (<i>port gap</i>). Su forma le da un ancho de banda grande. Un <b>metamaterial</b> es una estructura artificial, periódica, que se comporta ante las ondas con propiedades que no tienen los materiales comunes y que aquí se usa para concentrar la radiación hacia adelante.</p>
+
+  <h2 id="d1">5. Primer diseño: bowtie recortada</h2>
+  <p>Siguiendo el artículo de 900 MHz, diseñé primero una bowtie simple con <b>recortes en los extremos</b>, que modifican tanto el ancho de banda como la frecuencia central. El diseño inicial salió del asistente (<i>wizard</i>) de Ansys Electronics y después ajusté a mano los parámetros hasta llevar la frecuencia central a la deseada.</p>
+  <table class="t">
+    <tr><th>Parámetro</th><th>Valor</th></tr>
+    <tr><td>Inner_Width</td><td>2,7 mm</td></tr>
+    <tr><td>Outer_Width</td><td>46,4 mm</td></tr>
+    <tr><td>Arm_Length</td><td>51,5 mm</td></tr>
+    <tr><td>Port_Gap</td><td>2,7 mm</td></tr>
+    <tr><td>PCB FR4</td><td>1,575 mm de espesor, 170 × 170 mm</td></tr>
+  </table>
+  <div class="two">
+    <figure><img src="../assets/radar/rl-recortada.png" alt="Pérdida de retorno S11 de la bowtie recortada"><figcaption>S11 de la bowtie recortada: ancho de banda de 0,152 GHz (de 0,894 a 1,045 GHz con S11 &lt; −10 dB).</figcaption></figure>
+    <figure><img src="../assets/radar/ganancia-recortada.png" alt="Ganancia pico en función de la frecuencia de la bowtie recortada"><figcaption>Ganancia pico: entre 1,2 y 1,8 dB en toda la banda simulada.</figcaption></figure>
+  </div>
+  <p>La <b>pérdida de retorno (S11)</b> mide cuánta potencia se refleja de vuelta hacia el generador en lugar de radiarse. Con S11 por debajo de −10 dB, solo se refleja el 10 % de la potencia, y el rango de frecuencias donde eso ocurre se toma como el <b>ancho de banda</b> de la antena. La bowtie recortada queda bien centrada (con un mínimo de unos −25 dB cerca de 0,96 GHz), pero con poco ancho de banda y poca ganancia.</p>
+  <figure class="fig" style="max-width:420px"><img src="../assets/radar/patron-recortada-0p9.png" alt="Diagrama de radiación polar de la bowtie recortada a 0,9 GHz"><figcaption>Diagrama de radiación a 0,9 GHz: la antena radia casi igual hacia adelante que hacia atrás.</figcaption></figure>
+  <p>El diagrama de radiación muestra el problema de fondo: <b>radia casi igual hacia los dos lados</b>. La mitad de la energía se va en la dirección contraria a la del objetivo. Era el punto de partida para mejorar.</p>
+
+  <h2 id="d2">6. Segundo diseño: bowtie con reflector y metamaterial</h2>
+  <p>El segundo diseño es una bowtie de <b>brazos redondeados</b> a la que se le agregan <b>dos elementos</b> para ganar direccionalidad, siguiendo el paper de la antena direccional de alta ganancia:</p>
+  <ul>
+    <li>Un <b>plano reflector</b> de cobre, que devuelve hacia adelante la energía que iba hacia atrás.</li>
+    <li>Un plano de <b>metamaterial</b>, que ayuda a concentrar la radiación, aumentar la ganancia y ampliar el ancho de banda.</li>
+  </ul>
+  <p>La antena quedó con tres partes: la bowtie sobre la placa FR4, el plano reflector y el metamaterial. Para llegar a los valores finales probé muchas combinaciones, variando las distancias y las formas de ambos planos. Los diseños sin estos aditamentos rendían de forma similar al primero.</p>
+  <table class="t">
+    <tr><th>Parte</th><th>Parámetro</th><th>Valor</th></tr>
+    <tr><td rowspan="5"><b>Antena</b></td><td>Inner_Width</td><td>1,8 mm</td></tr>
+    <tr><td>Outer_Width</td><td>44,3 mm</td></tr>
+    <tr><td>Arm_Length</td><td>36,9 mm</td></tr>
+    <tr><td>Outer_Radius</td><td>24,4 mm</td></tr>
+    <tr><td>Port_Gap</td><td>1,8 mm</td></tr>
+    <tr><td rowspan="4"><b>FR4</b></td><td>Espesor</td><td>1,575 mm</td></tr>
+    <tr><td>Tamaño</td><td>150 × 150 mm</td></tr>
+    <tr><td>Distancia FR4 – plano reflector</td><td>150 mm</td></tr>
+    <tr><td>Distancia FR4 – metamaterial</td><td>130 mm</td></tr>
+    <tr><td rowspan="3"><b>Metamaterial</b></td><td>D1</td><td>60 mm</td></tr>
+    <tr><td>D2</td><td>59 mm</td></tr>
+    <tr><td>D3</td><td>10 mm</td></tr>
+  </table>
+  <div class="two">
+    <figure><img src="../assets/radar/rl-rounded.png" alt="Pérdida de retorno S11 de la bowtie con reflector y metamaterial"><figcaption>S11: ancho de banda de 0,303 GHz (de 0,805 a 1,108 GHz con S11 &lt; −10 dB).</figcaption></figure>
+    <figure><img src="../assets/radar/ganancia-rounded.png" alt="Ganancia pico en función de la frecuencia de la bowtie con reflector y metamaterial"><figcaption>Ganancia pico: cerca de 7,8 dB entre 0,75 y 0,8 GHz.</figcaption></figure>
+  </div>
+  <div class="two">
+    <figure><img src="../assets/radar/patron-rounded-0p8.png" alt="Diagrama de radiación polar a 0,8 GHz de la bowtie con reflector y metamaterial"><figcaption>Diagrama de radiación a 0,8 GHz.</figcaption></figure>
+    <figure><img src="../assets/radar/patron-rounded-0p9.png" alt="Diagrama de radiación polar a 0,9 GHz de la bowtie con reflector y metamaterial"><figcaption>Diagrama de radiación a 0,9 GHz.</figcaption></figure>
+  </div>
+
+  <h2 id="comparo">7. Comparación</h2>
+  <table class="t">
+    <tr><th></th><th>Bowtie recortada</th><th>Bowtie + reflector + metamaterial</th></tr>
+    <tr><td><b>Ancho de banda (S11 &lt; −10 dB)</b></td><td>0,152 GHz (0,894 – 1,045 GHz)</td><td><b>0,303 GHz</b> (0,805 – 1,108 GHz): el doble</td></tr>
+    <tr><td><b>Ganancia pico</b></td><td>≈ 1,2 a 1,8 dB</td><td><b>≈ 7,8 dB</b> cerca de 0,78 GHz; ≈ 5 dB a 0,9 GHz</td></tr>
+    <tr><td><b>Ancho del haz principal</b></td><td>≈ 82° (a 0,9 GHz)</td><td>≈ 65° (a 0,8 y 0,9 GHz)</td></tr>
+    <tr><td><b>Radiación hacia adelante y hacia atrás</b></td><td>Casi igual</td><td>Predomina hacia adelante, con un lóbulo trasero que sigue siendo apreciable</td></tr>
+  </table>
+  <p>Con el reflector y el metamaterial, el <b>ancho de banda se duplicó</b>, la <b>ganancia subió varios decibeles</b> y el haz se hizo <b>más angosto</b>: la antena quedó más direccional, que era el objetivo. Dos cosas a tener en cuenta: la mejora de ganancia es mayor en la parte baja de la banda y cae hacia 1,1 GHz, y el lóbulo trasero no desaparece por completo.</p>
+
+  <h2 id="sim">8. Cómo lo simulé</h2>
+  <p>Todas las simulaciones las hice en <b>Ansys Electronics</b> (la versión para estudiantes), y la calibración de cada variable fue por simulación: cambiar un parámetro, simular y comparar. Los datos de cada corrida (pérdida de retorno, ganancia, diagramas de radiación e impedancia de entrada) se exportaron y se graficaron en un <i>notebook</i> de Jupyter con Python, que es de donde salen las gráficas de esta página.</p>
+  <div class="callout"><p>El informe completo con los resultados está en el repositorio del proyecto: <a href="https://github.com/aalmela/EAIII_Radar/blob/main/1_Notebooks/Nico/Informe_antena.ipynb">Informe_antena.ipynb</a>. La introducción teórica del radar está en <a href="https://github.com/aalmela/EAIII_Radar/blob/main/1_Notebooks/Introducci%C3%B3n.ipynb">Introducción.ipynb</a>.</p></div>
+
+  <div class="pager"><a href="../index.html#proyectos">← Todos los proyectos</a><a href="../cv.html">Ver CV →</a></div>
+</article></main>
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span></div></footer>
+</body>
+</html>

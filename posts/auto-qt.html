@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto autónomo con integración Qt · Nicolás Pereyra</title>
+<meta name="description" content="Un auto controlado por WiFi desde una aplicación en Qt, con modo autónomo para esquivar obstáculos, basado en un LPC845.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css?v=2">
+<style>
+  article pre { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; font: 13px/1.55 var(--mono); margin: 20px 0; }
+  article code { font: 0.88em var(--mono); background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; border-radius: 3px; }
+  article pre code { border: 0; padding: 0; background: none; font-size: inherit; }
+  article h3 { font: 600 19px/1.3 var(--serif); margin: 28px 0 8px; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 15px; margin: 20px 0; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.t th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .codecap { font: 500 12px var(--mono); color: var(--muted); margin: 22px 0 -10px; }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="../index.html">npp<span>/</span>portfolio</a>
+  <nav><a href="../index.html#proyectos" aria-current="page">proyectos</a><a href="../cv.html">cv</a></nav>
+</div></header>
+<main class="wrap"><article>
+  <p class="eyebrow">2021 · Informática 2 (UTN) · LPC845 · Qt</p>
+  <h1>Auto autónomo con integración Qt</h1>
+  <p class="meta">Código: se va a cargar en GitHub próximamente</p>
+
+  <p>Lo armé en 2021 para la materia Informática 2. Es un auto que se maneja por WiFi desde una <b>aplicación en Qt</b> en la computadora, y que además tiene un <b>modo autónomo</b> en el que avanza solo y esquiva los obstáculos que encuentra. El profesor nos felicitó y nos seleccionó para presentarlo al año siguiente.</p>
+
+  <h2>Hardware</h2>
+  <table class="t">
+    <tr><th>Función</th><th>Componente</th></tr>
+    <tr><td>Microcontrolador</td><td>NXP LPC845 (Cortex-M0+)</td></tr>
+    <tr><td>Alimentación</td><td>Conversor DC desde celdas 18650 rescatadas de una notebook vieja</td></tr>
+    <tr><td>Motores</td><td>Puente H L293D, con la potencia regulada por PWM</td></tr>
+    <tr><td>Distancia a obstáculos</td><td>Ultrasonido HC-SR04 montado sobre un servo SG90</td></tr>
+    <tr><td>Distancia recorrida</td><td>Encoder casero con un sensor infrarrojo</td></tr>
+    <tr><td>Comunicación</td><td>ESP8266-01 por UART, con comandos AT</td></tr>
+  </table>
+
+  <h2>Comunicación: el auto crea su propia red</h2>
+  <p>El ESP8266 se configura como <b>access point</b> y abre un <b>servidor TCP</b> en el puerto 8888. La computadora ve el auto como una red WiFi más: se conecta, abre un socket contra el servidor y desde ahí le manda comandos. El microcontrolador le habla al ESP8266 por UART con comandos AT:</p>
+  <p class="codecap">Extracto de <code>source/ESP8266.h</code></p>
+  <pre><code class="language-c">#define COMANDO_CWMODE			ESP8266_enviaAT("AT+CWMODE=2\r\n")
+#define COMANDO_SOFTAP			ESP8266_configuraSoftAP("ESP8266-Wifi", "pas123", "3", "0")
+#define COMANDO_CIPMUX			ESP8266_enviaAT("AT+CIPMUX=1\r\n")
+#define COMANDO_CIPSERVER		ESP8266_enviaAT("AT+CIPSERVER=1,8888\r\n")</code></pre>
+  <p>Los comandos que manda la aplicación son letras sueltas dentro de una trama con un carácter inicial y uno final, para poder distinguirlos de las respuestas del módulo:</p>
+  <p class="codecap">Extracto de <code>source/ESP8266.h</code></p>
+  <pre><code class="language-c">#define MOVER_ADELANTE			'f'
+#define MOVER_IZQUIERDA_AV		'l'
+#define MOVER_DERECHA_AV		'r'
+#define MOVER_IZQUIERDA_RE		'k'
+#define MOVER_DERECHA_RE		'q'
+#define MOVER_ATRAS 			'b'
+#define FRENAR					's'
+#define MOV_AUTOMATICO_OFF		'x'
+#define MOV_AUTOMATICO_ON		'o'
+#define RESETEAR_DISTANCIA		'h'</code></pre>
+
+  <h2>El firmware: un lazo cooperativo</h2>
+  <p>No usé un sistema operativo. El programa principal es un lazo que atiende tres cosas por turno, apoyado en un sistema propio de <b>temporizadores por eventos</b> (<code>timer.c</code>) para todas las esperas, de modo que nada se queda bloqueado:</p>
+  <p class="codecap">Extracto de <code>source/auto4.c</code></p>
+  <pre><code class="language-c">while(1)
+{
+    TimerEvent();              // temporizadores por eventos
+    Verificar_datos();         // comunicación con el ESP8266
+    Movimiento_Auto(modo);     // control del auto: manual o automático
+}</code></pre>
+
+  <h2>Modo autónomo</h2>
+  <p>El modo autónomo es una <b>máquina de estados</b> (<code>REPOSO_AUTO → ESPERO_A_MEDIR → DECIDO_ACCION → GIRANDO_AUTO / GIRANDO_SERVO</code>). Mide la distancia al frente con el ultrasonido; si hay más de 20 cm libres, avanza. Si no, frena y usa el servo para mirar primero a la derecha y después a la izquierda:</p>
+  <p class="codecap">Extracto de <code>Movimiento_Auto()</code> en <code>source/Movimiento_Auto.c</code></p>
+  <pre><code class="language-c">case FRENTE:
+    if (distancia >= DISTANCIA_MAX_OBJETO)
+    {
+        //Si hay suficiente espacio de frente para avzanzar, avanzo
+        AVANZAR_AUTO;
+        //Vuelvo a medir
+        estado = REPOSO_AUTO;
+    }
+    else
+    {
+        DETENER_AUTO;
+        //Miro primero a la derecha
+        DETECCION_DERECHA;
+        AnguloServo = DERECHA;
+        ServoYaGiro = FALSE;
+        t_GirarServo();
+        estado = GIRANDO_SERVO;
+    }
+    break;</code></pre>
+  <p>Con las dos distancias, el auto elige el lado con más espacio. Si ninguno de los dos tiene lugar, da media vuelta:</p>
+  <p class="codecap">Extracto de <code>Decido_Movimiento()</code></p>
+  <pre><code class="language-c">if (distanciaDerecha >= distanciaIzquierda && distanciaDerecha >= DISTANCIA_MAX_OBJETO)
+{
+    //Si hay mas espacio a la derecha, giro para la derecha
+    GIRAR_DERECHA;
+    t_GirarAuto();
+}
+else if (distanciaDerecha < distanciaIzquierda && distanciaIzquierda >= DISTANCIA_MAX_OBJETO)
+{
+    //Si hay mas espacio a la izquierda, giro a la izquierda
+    GIRAR_IZQUIERDA;
+    t_GirarAuto();
+}
+else if (distanciaDerecha < DISTANCIA_MAX_OBJETO && distanciaIzquierda < DISTANCIA_MAX_OBJETO)
+{
+    //Si no tengo espacio para avanzar a los costados, doy media vuelta para retroceder
+    RETROCEDER_DERECHA;
+    t_RetrocederAuto();
+}</code></pre>
+  <p>Los giros están temporizados: unos 600 ms para 90° y 1 s para dar la vuelta. La medición usa el timer SCT y una interrupción de pin para medir el tiempo que tarda el eco, y el servo se maneja con PWM del CTIMER.</p>
+
+  <h2>El encoder casero</h2>
+  <p>Para saber cuánto recorrió el auto armé un encoder con un sensor infrarrojo de presencia, que modifiqué para que el fototransistor quedara del otro lado de la rueda. La rueda mide 66 mm y tiene 5 radios, así que el sensor cambia de estado <b>10 veces por vuelta</b>, y cada cambio equivale a unos 20,7 mm. Cada cambio se confirma con un antirrebote antes de contarlo:</p>
+  <p class="codecap">Extracto de <code>Debounce_Infrarrojo()</code> en <code>source/Infrarrojo.c</code></p>
+  <pre><code class="language-c">if(ESTADO_INFRA != estado_Anterior)
+{
+    debounce++;
+    if(debounce == N_DEBOUNCE)
+    {
+        debounce = 0;
+        estado_Anterior = ESTADO_INFRA;
+        contador_Infra++;
+    }
+}
+else
+{
+    debounce = 0;
+}</code></pre>
+  <p>Un problema práctico: el LED infrarrojo era tan potente que atravesaba el plástico de la rueda. Lo resolví envolviendo el plástico con cinta negra. El auto le informa a la computadora la distancia recorrida cada dos segundos, y solo cuando cambió.</p>
+
+  <h2>La aplicación en Qt</h2>
+  <p>La interfaz de la computadora la hice en <b>Qt 5</b>, con los módulos de widgets y de red. Se conecta al auto como <b>cliente TCP</b>: abre un socket contra <code>192.168.4.1:8888</code> (la IP por defecto del ESP8266) y le manda los comandos como tramas cortas, con <code>$</code> al inicio y <code>/</code> al final.</p>
+  <p class="codecap">Extractos de <code>app-qt/mainwindow.h</code> y <code>mainwindow.cpp</code></p>
+  <pre><code class="language-c">QString direccion_conectar = "192.168.4.1"; //ip default del ESP8266
+int puerto_conectar = 8888;
+
+QString Adelante = "$f/";
+QString Atras = "$b/";
+QString Frenar = "$s/";
+QString Modo_Automatico_ON = "$o/";
+QString Modo_Automatico_OFF = "$x/";
+
+bool MainWindow::Enviar_Trama_Mov(QString trama)
+{
+    QByteArray Aux = trama.toUtf8(); //convierte trama QString a qbytearray
+     if(socket_cliente->state() == QAbstractSocket::ConnectedState) //si esta conectado al sv
+     {
+         socket_cliente->write(Aux);
+         return true;
+     }
+     else
+        return false;
+}</code></pre>
+  <p>La aplicación permite:</p>
+  <ul>
+    <li><b>Conectarse y desconectarse</b>, con un indicador de estado (rojo, amarillo o verde).</li>
+    <li><b>Manejar el auto con botones o con las flechas del teclado.</b> El auto se mueve mientras se mantiene presionado y frena al soltar. Se pueden combinar teclas: flecha arriba más izquierda hace girar al auto hacia la izquierda avanzando, y lo mismo retrocediendo.</li>
+    <li><b>Activar y desactivar el modo autónomo.</b> Con el modo activo, el teclado deja de mandar comandos.</li>
+    <li><b>Ver una imagen del auto</b> que cambia según lo que hace (avanzar, retroceder, girar, frenar, modo autónomo o sin señal). En modo autónomo la imagen sigue las acciones que el auto informa.</li>
+    <li><b>Ver la distancia recorrida</b> y reiniciarla con un botón.</li>
+  </ul>
+  <p>El manejo del teclado combina dos variables, el sentido (avanzar o retroceder) y el giro, y de la combinación sale el comando:</p>
+  <p class="codecap">Extracto de <code>Direccion_Auto()</code> en <code>app-qt/mainwindow.cpp</code></p>
+  <pre><code class="language-c">if(sentido ==  RETROCEDER)
+{
+    if(giro == DERECHA)
+        Auto_MoverDerecha_Re();
+    else if(giro == IZQUIERDA)
+        Auto_MoverIzquierda_Re();
+    else
+        Auto_MoverAtras();
+    Modificar_Imagen_Auto(RETROCEDER);
+}
+else if(giro || sentido)
+{
+    if(giro == DERECHA)
+    {
+        Auto_MoverDerecha_Av();
+        Modificar_Imagen_Auto(DERECHA);
+    }
+    else if(giro == IZQUIERDA)
+    {
+        Auto_MoverIzquierda_Av();
+        Modificar_Imagen_Auto(IZQUIERDA);
+    }
+    else
+    {
+        Auto_MoverAdelante();
+        Modificar_Imagen_Auto(AVANZAR);
+    }
+}
+else
+{
+    Auto_Frenar();
+    Modificar_Imagen_Auto(FRENAR);
+}</code></pre>
+  <p>Del otro lado, la aplicación recibe dos tipos de mensajes: la distancia (<code>+NNNNN/</code>, en milímetros) y la acción actual del auto (<code>$f/</code>, <code>$l/</code>…), y actualiza la pantalla en consecuencia:</p>
+  <p class="codecap">Extracto resumido de <code>ESP8266_escucho()</code> en <code>app-qt/mainwindow.cpp</code></p>
+  <pre><code class="language-c">if(aux.size() == 7)
+{
+    if(aux.at(0) == '+' && aux.at(6) == '/')
+    {
+        aux = aux.left(6);
+        aux = aux.right(5);
+        ui->distancia_lineEdit->setText(aux);
+    }
+    else if(aux.at(4) == '$' && aux.at(6) == '/')
+    {
+        switch (aux.at(5).toLatin1())
+        {
+            case 'f': Modificar_Imagen_Auto(AVANZAR);   break;
+            case 'l': Modificar_Imagen_Auto(IZQUIERDA); break;
+            case 'r': Modificar_Imagen_Auto(DERECHA);   break;
+            case 'b': Modificar_Imagen_Auto(RETROCEDER); break;
+            case 's': Modificar_Imagen_Auto(FRENAR);    break;
+        }
+    }
+}</code></pre>
+  <p>La interfaz usa una hoja de estilos oscura propia y el logo de la UTN.</p>
+
+  <h2>Resultados</h2>
+  <p>Los resultados cumplieron por el lado del <b>control remoto</b>: el auto respondía a los comandos que mandaba la aplicación de Qt por WiFi.</p>
+  <p>El <b>modo autónomo</b>, en cambio, no funcionó correctamente. Hubo dos causas:</p>
+  <ul>
+    <li><b>Sensores poco precisos.</b> Las mediciones del ultrasonido y del encoder casero no tenían la exactitud que el modo autónomo necesitaba para decidir bien.</li>
+    <li><b>Debilidades mecánicas.</b> El auto estaba <b>desbalanceado hacia un lado</b> y se tiraba más para un lado que para el otro. En el firmware llegué a ajustar a mano la potencia de los motores para que fuera recto (hay una constante <code>POT_AJUSTADA</code> con ese propósito), pero la corrección por software no alcanzó a compensar un problema que era del chasis.</li>
+  </ul>
+  <div class="callout"><p>Aprendí que un buen algoritmo no compensa una mecánica débil ni sensores imprecisos. Si el auto no avanza recto, ninguna decisión del software llega a donde se esperaba.</p></div>
+
+  <div class="pager"><a href="cortina.html">← IoT Cortina DIY</a><a href="vl53l1x.html">Siguiente: VL53L1X →</a></div>
+</article></main>
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span></div></footer>
+<script src="../js/highlight.js" defer></script>
+</body>
+</html>

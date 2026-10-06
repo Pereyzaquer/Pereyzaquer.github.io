@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Un micrófono USB DIY con Raspberry Pi Pico 2 · Nicolás Pereyra</title>
+<meta name="description" content="Un micrófono USB plug and play armado con un AD620, un conversor PCM1808 y una Raspberry Pi Pico 2, inspirado en un video de DIY Perks.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css?v=2">
+<style>
+  article h3 { font: 600 19px/1.3 var(--serif); margin: 28px 0 8px; }
+  .fig img { background: #fdfbf7; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 15px; margin: 20px 0; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.t th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  article code { font: 0.88em var(--mono); background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; border-radius: 3px; }
+  .tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0 6px; }
+  .tool { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font: 500 13px var(--mono); }
+  .tool img { height: 22px; width: auto; display: block; }
+  .tool img + span, .tool span { white-space: nowrap; }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="../index.html">npp<span>/</span>portfolio</a>
+  <nav><a href="../index.html#proyectos" aria-current="page">proyectos</a><a href="../cv.html">cv</a></nav>
+</div></header>
+<main class="wrap"><article>
+  <p class="eyebrow">Audio · Raspberry Pi Pico 2 · USB</p>
+  <h1>Un micrófono USB DIY con Raspberry Pi Pico 2</h1>
+  <p class="meta">Del preamplificador analógico al dispositivo plug and play</p>
+
+  <p>Este proyecto nació de un video: <a href="https://www.youtube.com/watch?v=LoQu3XXIayc">"Building a quality USB-C microphone"</a>, de DIY Perks. Me inspiré en usar la misma cápsula de micrófono, pero busqué mi propia implementación: un preamplificador <b>AD620</b>, un conversor <b>PCM1808</b> y una <b>Raspberry Pi Pico 2</b>. El resultado es un micrófono que se enchufa a cualquier computadora y funciona sin instalar nada.</p>
+
+  <div class="tools">
+    <div class="tool"><img src="../assets/logos/pico2.png" alt="" onerror="this.remove()"><span>Raspberry Pi Pico 2</span></div>
+    <div class="tool"><img src="../assets/logos/tinyusb.png" alt="" onerror="this.remove()"><span>TinyUSB</span></div>
+    <div class="tool"><img src="../assets/logos/audacity.png" alt="" onerror="this.remove()"><span>Audacity</span></div>
+    <div class="tool"><span>AD620</span></div>
+    <div class="tool"><span>PCM1808</span></div>
+  </div>
+
+  <figure>
+    <div class="ph">Foto del micrófono armado (pendiente)</div>
+    <figcaption>El producto terminado.</figcaption>
+  </figure>
+
+  <h2>La cadena de señal</h2>
+  <p>Un micrófono de este tipo hace tres cosas en orden: convierte el sonido en una tensión muy pequeña, la amplifica sin agregarle ruido y la digitaliza. En este diseño:</p>
+  <figure class="fig"><img src="../assets/microfono/cadena-senal.svg?v=2" alt="Cadena de señal: cápsula, AD620, PCM1808, Pico 2 y USB"><figcaption>De la cápsula a la computadora. Diagrama propio.</figcaption></figure>
+  <table class="t">
+    <tr><th>Etapa</th><th>Para qué sirve</th></tr>
+    <tr><td><b>AD620</b></td><td>Es un <b>amplificador de instrumentación</b>: amplifica la diferencia entre sus dos entradas, rechaza el ruido que les llega a las dos por igual y se ajusta con una sola resistencia. Es justo lo que hace falta para una señal tan chica.</td></tr>
+    <tr><td><b>PCM1808</b></td><td>Es un <b>conversor analógico-digital pensado para audio</b>. Entrega el sonido ya digitalizado por I²S, el protocolo estándar para pasar audio entre chips.</td></tr>
+    <tr><td><b>Raspberry Pi Pico 2</b></td><td>Recibe ese audio y lo manda por USB.</td></tr>
+  </table>
+
+  <h2>Por qué esta combinación</h2>
+  <p>La parte más delicada de un micrófono es la analógica, porque cualquier ruido que se cuele antes de digitalizar ya no se puede sacar. Por eso el AD620 es la primera etapa y el PCM1808 digitaliza enseguida después.</p>
+  <p>Usar el PCM1808 también <b>simplifica la implementación</b>, porque la Pico 2 tiene <b>soporte para I²S</b>: se conectan directamente y la placa solo tiene que mover datos, sin ocuparse de la conversión.</p>
+
+  <h2>El software: un micrófono que se reconoce solo</h2>
+  <p>Para que el dispositivo funcione en cualquier computadora usé la librería <b>TinyUSB</b>, que permite que la Pico 2 se presente como un dispositivo USB de audio estándar. Los sistemas operativos ya traen el controlador para esa clase de dispositivos, así que el micrófono es <b>plug and play</b>: se conecta y aparece como una entrada de audio más, sin instalar nada. Con eso, el sistema quedó funcional de punta a punta.</p>
+
+  <h2>Calibración con Audacity</h2>
+  <p>Una vez andando, hacía falta saber qué tan limpio era. Con <b>Audacity</b> grabé el micrófono y analicé las grabaciones para ubicar <b>dónde estaba el ruido del sistema</b>. La idea es simple: con la entrada en silencio, lo que queda en la grabación es el piso de ruido propio del micrófono, y de ahí se ve qué parte hay que mejorar.</p>
+  <figure class="fig"><img src="../assets/microfono/forma-de-onda.svg" alt="Forma de onda con un tramo de silencio que muestra el piso de ruido y un tramo de voz"><figcaption>Cómo se ve el piso de ruido en una grabación. Ilustración propia.</figcaption></figure>
+  <figure>
+    <div class="ph">Captura de Audacity con las mediciones (pendiente)</div>
+    <figcaption>La grabación y el análisis reales.</figcaption>
+  </figure>
+
+  <div class="pager"><a href="../index.html#proyectos">← Todos los proyectos</a><a href="../cv.html">Ver CV →</a></div>
+</article></main>
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span></div></footer>
+</body>
+</html>

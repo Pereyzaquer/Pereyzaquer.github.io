@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" font-family="system-ui, Segoe UI, Arial, sans-serif" font-size="13">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1d1b18"/></marker></defs>
+<rect width="760" height="440" rx="10" fill="#fdfbf7" stroke="#d9d3c5"/>
+<text x="380" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1d1b18">El efecto de la masa térmica de la celda</text>
+<line x1="70" y1="380" x2="720" y2="380" stroke="#1d1b18" stroke-width="1.4"/>
+<line x1="70" y1="60" x2="70" y2="380" stroke="#1d1b18" stroke-width="1.4"/>
+<path d="M 114.8 277.5 L 157.4 284.0 L 198.0 291.7 L 264.8 302.5 L 392.8 326.7 L 663.6 363.3" fill="none" stroke="#3d5a80" stroke-width="3" stroke-dasharray="8 5"/>
+<circle cx="114.8" cy="277.5" r="4" fill="#3d5a80"/>
+<circle cx="157.4" cy="284.0" r="4" fill="#3d5a80"/>
+<circle cx="198.0" cy="291.7" r="4" fill="#3d5a80"/>
+<circle cx="264.8" cy="302.5" r="4" fill="#3d5a80"/>
+<circle cx="392.8" cy="326.7" r="4" fill="#3d5a80"/>
+<circle cx="663.6" cy="363.3" r="4" fill="#3d5a80"/>
+<path d="M 114.8 75.0 L 157.4 113.9 L 198.0 206.7 L 264.8 288.9 L 392.8 323.5 L 663.6 363.9" fill="none" stroke="#b4441c" stroke-width="3"/>
+<circle cx="114.8" cy="75.0" r="4" fill="#b4441c"/>
+<circle cx="157.4" cy="113.9" r="4" fill="#b4441c"/>
+<circle cx="198.0" cy="206.7" r="4" fill="#b4441c"/>
+<circle cx="264.8" cy="288.9" r="4" fill="#b4441c"/>
+<circle cx="392.8" cy="323.5" r="4" fill="#b4441c"/>
+<circle cx="663.6" cy="363.9" r="4" fill="#b4441c"/>
+<path d="M 264.8 285.8 L 392.8 323.3 L 663.6 363.9" fill="none" stroke="#4a7c4e" stroke-width="3" stroke-dasharray="2 5"/>
+<circle cx="264.8" cy="285.8" r="4" fill="#4a7c4e"/>
+<circle cx="392.8" cy="323.3" r="4" fill="#4a7c4e"/>
+<circle cx="663.6" cy="363.9" r="4" fill="#4a7c4e"/>
+<line x1="400" y1="84" x2="450" y2="84" stroke="#3d5a80" stroke-width="3" stroke-dasharray="8 5"/><text x="458" y="88" font-size="12.5" fill="#1d1b18">Fusible aislado, sin celda</text>
+<line x1="400" y1="106" x2="450" y2="106" stroke="#b4441c" stroke-width="3"/><text x="458" y="110" font-size="12.5" fill="#1d1b18">Con la celda real conectada</text>
+<line x1="400" y1="128" x2="450" y2="128" stroke="#4a7c4e" stroke-width="3" stroke-dasharray="2 5"/><text x="458" y="132" font-size="12.5" fill="#1d1b18">Sumidero ideal (masa infinita)</text>
+<text x="395" y="408" text-anchor="middle" font-size="13" fill="#1d1b18">Corriente →</text>
+<text x="22" y="220" font-size="13" fill="#1d1b18" transform="rotate(-90 22 220)" text-anchor="middle">Tiempo en abrir →</text>
+<text x="380" y="428" text-anchor="middle" font-size="11.5" fill="#6b665d">Con corrientes bajas, la celda "se lleva" el calor del fusible y lo hace tardar mucho más. Ejes logarítmicos, sin valores.</text>
+</svg>

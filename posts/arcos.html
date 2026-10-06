@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arcos impresos en 3D · Nicolás Pereyra</title>
+<meta name="description" content="Arcos a escala impresos en 3D para un torneo de arquería: compuestos modificados para que no se rompan y un recurvo olímpico de diseño propio.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css?v=2">
+<style>
+  article code { font: 0.88em var(--mono); background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; border-radius: 3px; }
+  article h3 { font: 600 19px/1.3 var(--serif); margin: 28px 0 8px; }
+  .fig img { background: #fff; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; }
+  .fig.narrow img { max-width: 360px; margin: 0 auto; }
+  .pair { display: grid; grid-template-columns: 1fr 1.7fr; gap: 14px; align-items: center; margin: 28px 0 8px; }
+  .pair figure { margin: 0; }
+  .pair img { background: #fff; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; display: block; }
+  .pair figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; }
+  @media (max-width: 620px) { .pair { grid-template-columns: 1fr; } .pair figure:first-child img { max-width: 260px; margin: 0 auto; } }
+  table.t { border-collapse: collapse; width: 100%; font-size: 15px; margin: 20px 0; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.t th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="../index.html">npp<span>/</span>portfolio</a>
+  <nav><a href="../index.html#proyectos" aria-current="page">proyectos</a><a href="../cv.html">cv</a></nav>
+</div></header>
+<main class="wrap"><article>
+  <p class="eyebrow">2022 · Impresión 3D · Diseño mecánico</p>
+  <h1>Arcos impresos en 3D para un torneo de arquería</h1>
+  <p class="meta">Modificar un diseño ajeno y diseñar uno propio</p>
+
+  <p>Un amigo participó en un torneo de arquería. Con un grupo de amigos decidimos llevar al evento <b>arcos a escala</b> y llaveros. Todos funcionales: usaban brochetas como flechas. Mostramos dos tipos de arco y cada uno planteó un problema distinto: en los compuestos había que <b>arreglar un diseño ajeno</b>, y en el recurvo había que <b>crear uno desde cero</b>.</p>
+
+  <h2>Arcos compuestos: mejorar un diseño que no era nuestro</h2>
+  <p>Los arcos compuestos no los diseñamos nosotros: los modelos los sacamos de internet. Tampoco los vendimos. Lo que hicimos fue <b>modificarlos para mejorar su desempeño</b>.</p>
+  <figure class="fig"><img src="../assets/arcos/compuesto-modelo-3d.webp" alt="Modelo 3D de un arco compuesto con palas azules, poleas y cuerpo gris, con la malla de triángulos a la vista"><figcaption>El arco compuesto en el modelo 3D. Se ve la malla de triángulos, típica de los archivos STL descargados.</figcaption></figure>
+
+  <h3>Qué tiene de particular un arco compuesto</h3>
+  <p>A diferencia de un arco recurvo, el compuesto lleva <b>poleas (levas)</b> en la punta de cada pala. En las imágenes son las ruedas caladas de los extremos. El cable pasa por ellas y, al abrir el arco, la geometría de la polea hace que la fuerza que hay que sostener al final de la apertura <b>baje</b>, aunque las palas estén muy cargadas. Es más mecanismo, más piezas y más lugares donde algo puede fallar.</p>
+  <figure class="fig narrow"><img src="../assets/arcos/compuesto-vista-frontal.png" alt="Vista frontal del arco compuesto: cuerpo gris con aligeramientos, palas azules y dos poleas"><figcaption>Vista frontal: el cuerpo con sus aligeramientos, las palas azules y las dos poleas.</figcaption></figure>
+
+  <h3>El problema: se rompía</h3>
+  <p>El diseño original era <b>muy frágil y propenso a partirse</b>. No hubo ningún cálculo detrás de la solución: fue <b>prueba, error y mejora</b>. Imprimíamos, tensábamos, veíamos por dónde se rompía y corregíamos esa zona en la siguiente versión. Así llegamos a dos cambios: <b>engrosar las palas</b> y <b>modificar el cuerpo</b>.</p>
+  <p>Una pieza impresa por capas se rompe justo donde es fina o tiene una esquina marcada, y engrosarla la hace más resistente. Pero también más dura: una pala más gruesa es más difícil de abrir. Encontrar ese equilibrio fue cuestión de probar versiones hasta que el arco aguantara sin volverse imposible de tensar.</p>
+
+  <h2>El recurvo: un diseño enteramente propio</h2>
+  <p>El recurvo sí es un diseño <b>completamente nuestro</b>. Es una <b>escala de un arco comercial de competición</b>: elegimos un modelo real y lo reprodujimos en CAD con sus proporciones y sus detalles.</p>
+  <div class="pair">
+    <figure><img src="../assets/arcos/recurvo-cad.png" alt="Modelo CAD del arco recurvo con mira, contrapeso y base"><figcaption>El recurvo en CAD.</figcaption></figure>
+    <figure><img src="../assets/arcos/riser-comercial.webp" alt="Cuerpo de un arco recurvo comercial azul con aligeramientos triangulares apoyado en un soporte"><figcaption>El arco comercial en el que se basa: un cuerpo de aluminio con aligeramientos.</figcaption></figure>
+  </div>
+  <p>Comparando ambas imágenes se reconocen las decisiones de diseño: el cuerpo azul con sus <b>aligeramientos triangulares</b>, la forma curva del cuerpo y la zona de la empuñadura. El cuerpo comercial es de aluminio mecanizado; el nuestro tuvo que resolver lo mismo en plástico impreso.</p>
+
+  <h3>Qué lleva un recurvo de competición</h3>
+  <p>Nuestro modelo no es solo el cuerpo y las palas. Le agregamos los accesorios que definen a un arco de competición:</p>
+  <table class="t">
+    <tr><th>Pieza</th><th>Para qué sirve</th></tr>
+    <tr><td><b>Cuerpo (riser)</b></td><td>La parte central: se sostiene con la mano y sostiene las palas.</td></tr>
+    <tr><td><b>Palas (limbs)</b></td><td>Son las que se flexionan y almacenan la energía. En un recurvo las puntas se curvan hacia adelante, y de ahí el nombre.</td></tr>
+    <tr><td><b>Mira</b></td><td>El accesorio con el que se apunta. Se ve como la pieza chica en un lateral del cuerpo.</td></tr>
+    <tr><td><b>Contrapeso (estabilizador)</b></td><td>La barra larga con masa en la punta. Al alejar peso de la mano reduce el giro del arco al soltar la cuerda.</td></tr>
+    <tr><td><b>Base de apoyo</b></td><td>Permite que el arco se apoye parado sin tener que sostenerlo, como en la foto del arco comercial.</td></tr>
+  </table>
+
+  <h2>Materiales</h2>
+  <p>Combiné PLA y PETG según lo que le exigía cada pieza. Las partes que se deforman en uso, como las que trabajan flexionando, van en PETG, más elástico y dúctil. Las piezas rígidas van en PLA. Elegir el material y el espesor de cada pieza según cómo trabaja fue parte central del aprendizaje.</p>
+
+  <h2>Qué me llevé</h2>
+  <ul>
+    <li><b>Modificar un diseño ajeno es una habilidad distinta de diseñar uno propio.</b> En el compuesto hubo que entender por qué falla algo que no hice yo; en el recurvo, tomar todas las decisiones.</li>
+    <li><b>Iterar funciona:</b> imprimir, romper, mirar dónde falló y corregir enseñó más sobre piezas impresas que cualquier teoría. El espesor y las esquinas importan tanto como el material.</li>
+    <li>Este proyecto mejoró mucho mis habilidades de diseño 3D.</li>
+  </ul>
+
+  <div class="pager"><a href="vl53l1x.html">← VL53L1X</a><a href="../index.html#proyectos">Todos los proyectos →</a></div>
+</article></main>
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span></div></footer>
+</body>
+</html>

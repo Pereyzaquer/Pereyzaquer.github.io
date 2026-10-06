@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" font-family="system-ui, Segoe UI, Arial, sans-serif" font-size="13">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1d1b18"/></marker></defs>
+<rect width="760" height="360" rx="10" fill="#fdfbf7" stroke="#d9d3c5"/>
+<defs><linearGradient id="leg" x1="0" x2="1"><stop offset="0" stop-color="#c9c9c9"/><stop offset=".5" stop-color="#f08a4b"/><stop offset="1" stop-color="#d7301f"/></linearGradient></defs>
+<defs><linearGradient id="tira" x1="0" x2="1"><stop offset="0" stop-color="#c9c9c9"/><stop offset=".15" stop-color="#f0b074"/><stop offset=".5" stop-color="#e9863f"/><stop offset=".85" stop-color="#f0b074"/><stop offset="1" stop-color="#c9c9c9"/></linearGradient><radialGradient id="punto" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#d7301f"/><stop offset=".55" stop-color="#f08a4b"/><stop offset="1" stop-color="#c9c9c9"/></radialGradient></defs>
+<text x="380" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1d1b18">Dos formas de hacer un fusible</text>
+<text x="190" y="60" text-anchor="middle" font-weight="600" fill="#1d1b18">1. La tira</text>
+<rect x="22" y="100" width="64" height="100" rx="4" fill="#c9c9c9" stroke="#1d1b18" stroke-width="1.6"/>
+<rect x="294" y="100" width="64" height="100" rx="4" fill="#c9c9c9" stroke="#1d1b18" stroke-width="1.6"/>
+<rect x="86" y="130" width="208" height="40" fill="url(#tira)" stroke="#1d1b18" stroke-width="1.6"/>
+<text x="190" y="230" text-anchor="middle" font-size="12.5" fill="#1d1b18">Una tira de metal de sección pareja</text>
+<text x="190" y="248" text-anchor="middle" font-size="12" fill="#6b665d">Se calienta todo el largo</text>
+<text x="54" y="94" text-anchor="middle" font-size="11" fill="#6b665d">pestaña</text><text x="326" y="94" text-anchor="middle" font-size="11" fill="#6b665d">pestaña</text>
+<text x="570" y="60" text-anchor="middle" font-weight="600" fill="#1d1b18">2. El puente</text>
+<rect x="400" y="100" width="64" height="100" rx="4" fill="#c9c9c9" stroke="#1d1b18" stroke-width="1.6"/>
+<rect x="672" y="100" width="64" height="100" rx="4" fill="#c9c9c9" stroke="#1d1b18" stroke-width="1.6"/>
+<polygon points="464,122 528,122 528,135 582,135 582,165 528,165 528,178 464,178" fill="#c9c9c9" stroke="#1d1b18" stroke-width="1.6"/>
+<polygon points="672,122 652,122 652,135 598,135 598,165 652,165 652,178 672,178" fill="#c9c9c9" stroke="#1d1b18" stroke-width="1.6"/>
+<rect x="582" y="135" width="16" height="30" fill="#c9c9c9" stroke="#1d1b18" stroke-width="1.6"/>
+<ellipse cx="590" cy="150" rx="26" ry="24" fill="url(#punto)" opacity=".9"/>
+<text x="590" y="230" text-anchor="middle" font-size="12.5" fill="#1d1b18">Se reduce mucho la sección en un punto</text>
+<text x="590" y="248" text-anchor="middle" font-size="12" fill="#6b665d">El calor se concentra y el resto casi no se calienta</text>
+<text x="590" y="112" text-anchor="middle" font-size="11" fill="#6b665d">puente</text>
+<rect x="250" y="285" width="260" height="14" rx="3" fill="url(#leg)"/>
+<text x="250" y="316" font-size="11.5" fill="#6b665d">más frío</text><text x="510" y="316" text-anchor="end" font-size="11.5" fill="#6b665d">más caliente</text>
+<text x="380" y="342" text-anchor="middle" font-size="11.5" fill="#6b665d">Esquema conceptual de la topología, sin dimensiones ni escala.</text>
+</svg>
