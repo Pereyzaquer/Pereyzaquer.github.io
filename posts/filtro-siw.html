@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Un filtro pasabanda en guía de onda integrada (SIW) · Nicolás Pereyra</title>
+<meta name="description" content="Diseño de un filtro pasabanda de tres cavidades en tecnología SIW centrado en 2,87 GHz: de la síntesis a la simulación en openEMS, Palace y CST, y un primer prototipo medido.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css?v=2">
+<style>
+  article h3 { font: 600 19px/1.3 var(--serif); margin: 28px 0 8px; }
+  .fig img { background: #fff; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; }
+  .fig.photo img { max-width: 420px; margin: 0 auto; display: block; }
+  table.t { border-collapse: collapse; width: 100%; font-size: 15px; margin: 20px 0; }
+  table.t th, table.t td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.t th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  article code { font: 0.88em var(--mono); background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; border-radius: 3px; }
+  .toc { font: 14px/1.9 var(--mono); }
+  .toc a { color: var(--muted); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .next { font: 500 14px var(--mono); color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; margin-top: 36px; }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="wrap">
+  <a class="brand" href="../index.html">npp<span>/</span>portfolio</a>
+  <nav><a href="../index.html#proyectos" aria-current="page">proyectos</a><a href="../cv.html">cv</a></nav>
+</div></header>
+<main class="wrap"><article>
+  <p class="eyebrow">2026 · Medidas Electrónicas 2 · Microondas · SIW</p>
+  <h1>Un filtro pasabanda en guía de onda integrada (SIW) a 2,87 GHz</h1>
+  <p class="meta">De la síntesis a la simulación y un primer prototipo. Proyecto en curso</p>
+
+  <p>Este es un proyecto que empecé hace poco, junto con dos compañeros, para la materia Medidas Electrónicas 2: diseñar y construir un <b>filtro pasabanda centrado en 2,87 GHz</b> (banda S) usando una tecnología que no había tocado antes, la <b>guía de onda integrada en sustrato</b> (<i>Substrate Integrated Waveguide</i>, o <b>SIW</b>). El informe final está en desarrollo; acá cuento lo que hicimos hasta ahora.</p>
+
+  <p class="toc">
+    <a href="#siw">1. Qué es una SIW</a><br>
+    <a href="#sintesis">2. El filtro que queremos</a><br>
+    <a href="#primero">3. El primer diseño</a><br>
+    <a href="#gratis">4. Las herramientas gratuitas y sus límites</a><br>
+    <a href="#palace">5. Optimizar con Palace</a><br>
+    <a href="#cst">6. La verificación en CST</a><br>
+    <a href="#prototipo">7. El prototipo</a><br>
+    <a href="#final">8. El diseño final</a>
+  </p>
+
+  <h2 id="siw">1. Qué es una SIW</h2>
+  <p>Una guía de onda rectangular, la clásica de microondas, es un tubo metálico por donde viaja la señal. Funciona muy bien (poca pérdida, mucha potencia), pero es voluminosa y cara de fabricar. La <b>SIW</b> reproduce esa guía sobre una placa de circuito impreso: los planos de cobre de arriba y de abajo hacen de techo y piso, y <b>dos filas de vías metalizadas</b> hacen de paredes laterales. Así se combinan el bajo costo y la facilidad de fabricar un circuito plano con las ventajas de una guía de onda.</p>
+  <p>Usamos un laminado de microondas <b>Rogers RO4350B</b> de 0,76 mm, con vías de 0,8 mm de diámetro cada 1,5 mm.</p>
+
+  <h2 id="sintesis">2. El filtro que queremos</h2>
+  <p>El filtro es de <b>tres cavidades resonantes</b> acopladas entre sí por <b>iris inductivos</b> (aberturas en las paredes de vías), con una respuesta de <b>Chebyshev</b>: una banda de paso con un 5 % de ancho de banda y un rizado de solo 0,1 dB. A partir de la teoría de síntesis de filtros se obtienen los valores de acoplamiento entre cavidades y del acoplamiento externo que la geometría tiene que reproducir. El resto del trabajo consiste en encontrar las dimensiones físicas que logran eso.</p>
+  <table class="t">
+    <tr><th>Especificación</th><th>Valor</th></tr>
+    <tr><td>Frecuencia central</td><td>2,87 GHz</td></tr>
+    <tr><td>Orden</td><td>3 cavidades</td></tr>
+    <tr><td>Ancho de banda fraccional</td><td>5 %</td></tr>
+    <tr><td>Rizado (Chebyshev)</td><td>0,1 dB</td></tr>
+    <tr><td>Sustrato</td><td>Rogers RO4350B, 0,76 mm</td></tr>
+  </table>
+
+  <h2 id="primero">3. El primer diseño</h2>
+  <p>Con fórmulas analíticas se calcularon el ancho de la guía, la separación entre filas de vías y la longitud de cada cavidad, usando la condición de resonancia del modo fundamental. Después se agregaron las transiciones cónicas que pasan de la línea microstrip de 50 Ω a la guía. Este fue el layout de la primera iteración:</p>
+  <figure class="fig"><img src="../assets/siw/layout-inicial.png" alt="Layout del filtro SIW de la primera iteración: tres cavidades, iris de acoplamiento y transiciones de entrada y salida"><figcaption>Primera iteración: tres cavidades formadas por filas de vías, los iris que las acoplan y las transiciones a microstrip.</figcaption></figure>
+  <figure class="fig"><img src="../assets/siw/cst-3d.png" alt="Modelo tridimensional del filtro en CST Studio Suite"><figcaption>El mismo diseño como modelo 3D paramétrico en CST Studio Suite.</figcaption></figure>
+
+  <h2 id="gratis">4. Las herramientas gratuitas y sus límites</h2>
+  <p>Para iterar rápido usamos simuladores gratuitos y de código abierto.</p>
+  <h3>openEMS: bueno para el centro, malo para la adaptación</h3>
+  <p><b>openEMS</b> permitió barrer la longitud de la cavidad y ver cómo se mueve la banda. Con una alimentación microstrip adaptada, la longitud calculada a mano coincidía con el objetivo, tanto en openEMS como en CST. Pero tenía un límite serio: <b>sus puertos no dan un S<sub>11</sub> confiable</b> para esta estructura (se obtuvieron valores sin sentido físico), así que servía para ubicar la banda, pero no para ajustar la adaptación.</p>
+  <figure class="fig"><img src="../assets/siw/barrido-openems.png" alt="Barrido de la longitud de la cavidad en openEMS comparado con la síntesis y con CST"><figcaption>Barrido de la longitud de la cavidad en openEMS contra el objetivo (línea roja) y CST (negro).</figcaption></figure>
+  <h3>Cuando el diseño llegó a CST, se deformó</h3>
+  <p>Y acá apareció el problema: con esas dimensiones, la simulación completa en <b>CST</b> mostraba una respuesta distinta de la esperada. La banda era casi el doble de ancha que el objetivo (el acoplamiento externo estaba sobredimensionado), con pérdidas de inserción altas y una adaptación pobre.</p>
+  <figure class="fig"><img src="../assets/siw/cst-primera-iteracion.png" alt="Respuesta objetivo de la síntesis comparada con la primera simulación en CST"><figcaption>La primera iteración en CST (línea azul) contra el objetivo de síntesis (rojo). La banda se ensanchó y se perdió la adaptación.</figcaption></figure>
+  <table class="t">
+    <tr><th></th><th>Objetivo</th><th>CST, primera iteración</th></tr>
+    <tr><td>Frecuencia central</td><td>2,870 GHz</td><td>2,818 GHz</td></tr>
+    <tr><td>Ancho de banda (−3 dB)</td><td>143 MHz</td><td>293 MHz</td></tr>
+    <tr><td>Pérdida de retorno</td><td>&gt; 16 dB</td><td>1,02 dB</td></tr>
+  </table>
+  <p class="next">Hacía falta una herramienta gratuita, pero confiable en la adaptación.</p>
+
+  <h2 id="palace">5. Optimizar con Palace</h2>
+  <p>La solución fue <b>Palace</b>, un solver de código abierto de AWS que usa elementos finitos con <b>puertos modales</b>: el mismo tipo de puerto que usa CST. Antes de confiar en él, simulamos con Palace la geometría de la primera iteración y comparamos con CST: <b>las dos respuestas coincidían</b>. Con eso quedó validado como reemplazo de CST para el lazo de optimización.</p>
+  <p>Sobre esa base se agregó al diseño un <b>iris de entrada y salida</b> ajustable, que fija el acoplamiento externo, y se corrió una <b>optimización automática</b> de seis variables: las longitudes de cavidad, los iris internos y externos, y el alimentador. Un hallazgo del proceso: las cavidades reales tienen que ser <b>más cortas</b> que el valor analítico (unos 34,4 mm contra 38,2 mm), porque los tapers y los iris externos cargan las cavidades y les bajan la frecuencia de resonancia. El cálculo analítico, que supone paredes ideales, no captura esa carga.</p>
+  <figure class="fig"><img src="../assets/siw/comparacion-metodos.png" alt="Comparación de S11 y S21 entre el objetivo, CST primera iteración, openEMS y el diseño final de Palace"><figcaption>Todas las respuestas en una misma gráfica: el objetivo, la primera iteración de CST y de openEMS, y el diseño optimizado con Palace (azul oscuro/rojo). La adaptación en banda mejora muchísimo.</figcaption></figure>
+
+  <h2 id="cst">6. La verificación en CST</h2>
+  <p>El diseño optimizado se exportó a CST con una macro que reconstruye la geometría en un solo paso, y se simuló. El resultado: <b>CST y Palace coinciden muy bien</b>, lo que valida toda la cadena de diseño (síntesis, optimización con Palace, verificación en CST).</p>
+  <figure class="fig"><img src="../assets/siw/verificacion-cst.png" alt="Verificación en CST del diseño optimizado superpuesta con la simulación de Palace y el objetivo"><figcaption>CST (rojo) superpuesto con Palace (azul) y el objetivo de síntesis (punteado).</figcaption></figure>
+  <table class="t">
+    <tr><th>Resultado en CST</th><th>Valor</th></tr>
+    <tr><td>Frecuencia central (−3 dB)</td><td>2,858 GHz (a 12 MHz del objetivo)</td></tr>
+    <tr><td>Adaptación en el centro de la banda</td><td>S<sub>11</sub> = −20,9 dB</td></tr>
+    <tr><td>Pérdida de inserción en el pico</td><td>1,19 dB</td></tr>
+    <tr><td>Ancho de banda (−3 dB)</td><td>234 MHz</td></tr>
+  </table>
+  <p>Dos detalles de la respuesta que tienen explicación. La pérdida de inserción de alrededor de 1 dB no se puede eliminar: es la <b>pérdida del propio dieléctrico</b>, que la teoría estima en un valor consistente con lo simulado. Y aparece una <b>banda espuria cerca de los 4,5 GHz</b>, que corresponde a modos de orden superior de las cavidades, algo inherente a los resonadores SIW y ajeno a la especificación.</p>
+
+  <h2 id="prototipo">7. El prototipo</h2>
+  <p>Con el diseño listo, fabricamos la placa y la medimos con un analizador vectorial de redes: la placa conectada por sus dos conectores SMA al instrumento, que muestra en pantalla las curvas de reflexión y transmisión.</p>
+  <figure class="fig photo"><img src="../assets/siw/prototipo-vna.webp" alt="Placa del filtro SIW con dos conectores SMA conectada a un analizador vectorial de redes portátil que muestra las curvas medidas"><figcaption>El filtro fabricado, conectado al analizador vectorial de redes. Se ven las filas de vías y las transiciones cónicas de entrada y salida.</figcaption></figure>
+  <p>El informe final con las mediciones está en desarrollo, pero ya pudimos comprobar que <b>la forma de la respuesta del filtro es similar a la que esperábamos</b> de la simulación.</p>
+
+  <h2 id="final">8. El diseño final</h2>
+  <p>Estas son las dimensiones a las que llegó la optimización, comparadas con las del primer diseño analítico:</p>
+  <table class="t">
+    <tr><th>Dimensión</th><th>Primera iteración</th><th>Final (Palace)</th></tr>
+    <tr><td>Longitud de cavidad</td><td>38,23 mm</td><td><b>34,40 mm</b></td></tr>
+    <tr><td>Iris internos (w<sub>12</sub> = w<sub>23</sub>)</td><td>13,66 mm</td><td><b>13,00 mm</b></td></tr>
+    <tr><td>Iris externo</td><td>sin iris</td><td><b>16,00 mm</b></td></tr>
+    <tr><td>Ancho de microstrip</td><td>1,66 mm</td><td><b>2,26 mm</b></td></tr>
+    <tr><td>Largo del taper</td><td>15,46 mm</td><td><b>15,46 mm</b></td></tr>
+  </table>
+  <figure class="fig"><img src="../assets/siw/layout-final.png" alt="Layout final optimizado del filtro SIW con cavidades más cortas y el iris externo"><figcaption>El layout final: cavidades más cortas que en la primera iteración y un iris externo que fija el acoplamiento.</figcaption></figure>
+  <p>El diseño final centra la banda en 2,87 GHz y logra <b>S<sub>11</sub> por debajo de −16 dB en la banda</b>, con una pérdida de inserción de alrededor de 1,5 dB. Su ancho de banda (unos 277 MHz en Palace) es mayor que el nominal de 143 MHz: la optimización priorizó el centrado y la adaptación, que eran los objetivos críticos, aceptando una banda algo más ancha. Para estrecharla hacia el 5 % bastaría con reducir en conjunto los iris interno y externo, un ajuste fino que queda como refinamiento.</p>
+
+  <div class="callout"><p><b>Qué sigue:</b> terminar el informe con la caracterización del prototipo y, si hace falta, afinar el ancho de banda. Lo más valioso hasta ahora fue la lección de método: una herramienta rápida sirve para explorar, pero hay que validarla contra una de referencia antes de confiar en ella.</p></div>
+
+  <div class="pager"><a href="../index.html#proyectos">← Todos los proyectos</a><a href="../cv.html">Ver CV →</a></div>
+</article></main>
+<footer><div class="wrap"><span>© 2026 Nicolás Pereyra Pigerl</span></div></footer>
+</body>
+</html>
