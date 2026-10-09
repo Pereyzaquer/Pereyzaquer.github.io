@@ -7,7 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/style.css?v=2">
+<style>
+  .fig img { background: #fdfbf7; border: 1px solid var(--line); border-radius: 8px; width: 100%; height: auto; }
+</style>
 </head>
 <body>
 <header class="site-header"><div class="wrap">
@@ -21,15 +24,27 @@
 
   <p>En 2020 compré mi primer kit de Arduino Uno. En los primeros años de la carrera no encontraba la práctica que buscaba, así que decidí armar un proyecto por mi cuenta, afuera de la facultad.</p>
 
-  <h2>Qué armé</h2>
-  <p>Estudié el efecto Peltier y construí una heladera con componentes de PC viejas. Le agregué un regulador con realimentación: mide la temperatura y ajusta la potencia que le llega a la celda para mantenerla.</p>
+  <h2>El efecto Peltier</h2>
+  <p>Una celda Peltier es una placa fina formada por muchos pares de semiconductores, unos tipo N y otros tipo P, conectados en serie. Cuando circula corriente por ellos, <b>una cara absorbe calor y la otra lo libera</b>: la celda no genera frío, <b>mueve calor</b> de un lado al otro. Si se invierte el sentido de la corriente, se invierten las caras.</p>
+  <figure class="fig"><img src="../assets/peltier/efecto-peltier.svg" alt="Esquema de una celda Peltier con semiconductores N y P entre dos placas"><figcaption>Cómo se mueve el calor en una celda Peltier. Diagrama propio.</figcaption></figure>
+  <p>Tiene una ventaja para una heladera chica: no hay compresor, ni gas, ni partes móviles. Y una limitación que condiciona todo el diseño: la cara caliente tiene que disipar <b>el calor que sacó del interior más el que genera la propia celda</b> (por efecto Joule). Si no se evacua bien, la cara caliente sube y la fría deja de enfriar. Por eso usé disipadores y ventiladores de PC viejas.</p>
 
-  <figure><div class="ph">Foto de la heladera terminada (pendiente)</div><figcaption>Agregar foto y esquema del regulador.</figcaption></figure>
+  <h2>Qué armé</h2>
+  <p>Construí una heladera con componentes de PC viejas: la celda, un disipador con ventilador del lado caliente y una caja aislada. Un Arduino lee la temperatura interior y decide cuándo encender la celda.</p>
+
+  <h2>Por qué un control con histéresis</h2>
+  <p>El control más simple sería encender la celda cuando la temperatura pasa de un valor y apagarla cuando baja de ese mismo valor. En la práctica, cerca de ese valor el sensor tiene ruido y la temperatura cambia de a poco, así que la celda se encendería y apagaría muchas veces seguidas.</p>
+  <p>Eso es malo por tres razones: <b>desgasta</b> los componentes (cada ciclo es un cambio térmico y eléctrico), es <b>innecesario</b> porque la temperatura casi no cambió, y es <b>poco eficiente</b> porque cada arranque tiene un pico de consumo antes de enfriar.</p>
+  <p>La solución es usar <b>dos umbrales</b>. La celda se enciende cuando la temperatura sube hasta el umbral alto y recién se apaga cuando baja hasta el umbral bajo. Entre los dos queda una banda donde no cambia de estado.</p>
+  <figure class="fig"><img src="../assets/peltier/histeresis.svg" alt="Temperatura oscilando entre dos umbrales con la celda encendida y apagada"><figcaption>La banda de histéresis hace que cada ciclo sea lento. Diagrama propio.</figcaption></figure>
+  <p>El ancho de la banda es un compromiso: una banda angosta mantiene la temperatura más constante pero conmuta más seguido, y una ancha conmuta menos pero deja que la temperatura varíe más.</p>
+
+  <figure><div class="ph">Foto de la heladera terminada (pendiente)</div><figcaption>Agregar foto de la heladera y del circuito.</figcaption></figure>
 
   <h2>Qué me llevé</h2>
-  <p>Fue el año en que empecé a usar <b>Onshape</b> (CAD 3D) y <b>KiCad</b> (PCB), dos herramientas que vi en primer año y que reutilicé en casi todos mis proyectos siguientes. También fue mi primer contacto real con un lazo de control cerrado.</p>
+  <p>Fue el año en que empecé a usar <b>Onshape</b> (CAD 3D) y <b>KiCad</b> (PCB), dos herramientas que vi en primer año y que reutilicé en casi todos mis proyectos siguientes. También fue mi primer contacto real con un lazo de control cerrado y con el problema de hacer que un sistema conmute lo menos posible.</p>
 
-  <div class="callout"><p><b>Para completar:</b> temperatura mínima alcanzada, tipo de control (on/off, PI…) y qué sensor usaste.</p></div>
+  <div class="callout"><p><b>Para completar:</b> temperatura mínima alcanzada, valores de los dos umbrales y qué sensor usaste.</p></div>
 
   <div class="pager"><a href="../index.html#proyectos">← Todos los proyectos</a><a href="cortina.html">Siguiente: IoT Cortina DIY →</a></div>
 </article></main>

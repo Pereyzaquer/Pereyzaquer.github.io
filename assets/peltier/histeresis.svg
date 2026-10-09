@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 330" font-family="IBM Plex Sans, Arial, sans-serif">
+  <rect width="700" height="330" fill="#fdfbf7"/>
+  <text x="350" y="28" text-anchor="middle" font-size="15" fill="#222" font-weight="600">Control con histéresis: se enciende arriba de un umbral y se apaga abajo de otro</text>
+  <!-- axes -->
+  <path d="M60 50 V190 H660" stroke="#555" fill="none"/>
+  <text x="26" y="120" font-size="12" fill="#555" transform="rotate(-90 26 120)" text-anchor="middle">temperatura</text>
+  <text x="660" y="208" text-anchor="end" font-size="12" fill="#555">tiempo</text>
+  <!-- band -->
+  <rect x="60" y="70" width="600" height="60" fill="#103c5c" opacity="0.07"/>
+  <line x1="60" y1="70" x2="660" y2="70" stroke="#b4441c" stroke-dasharray="5 4"/>
+  <line x1="60" y1="130" x2="660" y2="130" stroke="#103c5c" stroke-dasharray="5 4"/>
+  <text x="64" y="63" font-size="12" fill="#b4441c">umbral alto: enciende</text>
+  <text x="64" y="145" font-size="12" fill="#103c5c">umbral bajo: apaga</text>
+  <text x="350" y="165" text-anchor="middle" font-size="12" fill="#555">banda de histéresis: la celda no cambia de estado</text>
+  <!-- curve: on = falls, off = rises -->
+  <path d="M60 70 Q110 128 150 130 Q215 72 290 70 Q335 128 380 130 Q450 72 520 70 Q565 128 610 130" fill="none" stroke="#222" stroke-width="2.5"/>
+  <!-- state strip -->
+  <text x="56" y="232" font-size="12" fill="#555" text-anchor="end">celda</text>
+  <rect x="60" y="216" width="90" height="22" fill="#103c5c"/>
+  <rect x="150" y="216" width="140" height="22" fill="#e6e0d3"/>
+  <rect x="290" y="216" width="90" height="22" fill="#103c5c"/>
+  <rect x="380" y="216" width="140" height="22" fill="#e6e0d3"/>
+  <rect x="520" y="216" width="90" height="22" fill="#103c5c"/>
+  <rect x="610" y="216" width="50" height="22" fill="#e6e0d3"/>
+  <text x="105" y="232" font-size="12" fill="#fff" text-anchor="middle">ON</text>
+  <text x="220" y="232" font-size="12" fill="#555" text-anchor="middle">OFF</text>
+  <text x="335" y="232" font-size="12" fill="#fff" text-anchor="middle">ON</text>
+  <text x="450" y="232" font-size="12" fill="#555" text-anchor="middle">OFF</text>
+  <text x="565" y="232" font-size="12" fill="#fff" text-anchor="middle">ON</text>
+  <text x="350" y="285" text-anchor="middle" font-size="13" fill="#444">Con un solo umbral, el ruido del sensor haría conmutar la celda muchas veces por segundo.</text>
+  <text x="350" y="305" text-anchor="middle" font-size="13" fill="#444">Con dos umbrales, cada ciclo es lento y la celda conmuta pocas veces.</text>
+</svg>

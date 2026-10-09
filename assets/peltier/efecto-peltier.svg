@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 340" font-family="IBM Plex Sans, Arial, sans-serif">
+  <rect width="700" height="340" fill="#fdfbf7"/>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#b4441c"/></marker>
+    <marker id="b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#103c5c"/></marker>
+  </defs>
+  <!-- cold plate -->
+  <rect x="190" y="70" width="320" height="26" rx="3" fill="#cfe0ec" stroke="#103c5c"/>
+  <text x="350" y="88" text-anchor="middle" font-size="13" fill="#103c5c">cara fría (absorbe calor)</text>
+  <!-- top conductor -->
+  <rect x="230" y="96" width="240" height="12" fill="#c9a36a"/>
+  <!-- pillars -->
+  <rect x="236" y="108" width="62" height="124" fill="#d9d4c8" stroke="#555"/>
+  <rect x="402" y="108" width="62" height="124" fill="#e8c9bc" stroke="#555"/>
+  <text x="267" y="176" text-anchor="middle" font-size="18" fill="#333" font-weight="600">N</text>
+  <text x="433" y="176" text-anchor="middle" font-size="18" fill="#333" font-weight="600">P</text>
+  <!-- bottom conductors -->
+  <rect x="226" y="232" width="82" height="12" fill="#c9a36a"/>
+  <rect x="392" y="232" width="82" height="12" fill="#c9a36a"/>
+  <!-- hot plate -->
+  <rect x="190" y="244" width="320" height="26" rx="3" fill="#f3d3c2" stroke="#b4441c"/>
+  <text x="350" y="262" text-anchor="middle" font-size="13" fill="#8a2e0c">cara caliente (libera calor)</text>
+  <!-- supply wires -->
+  <path d="M267 238 V300 H120" fill="none" stroke="#333" stroke-width="2"/>
+  <path d="M433 238 V300 H580" fill="none" stroke="#333" stroke-width="2"/>
+  <text x="112" y="304" text-anchor="end" font-size="14" fill="#333">+</text>
+  <text x="588" y="304" font-size="14" fill="#333">−</text>
+  <!-- current arrows -->
+  <path d="M150 300 H215" stroke="#333" stroke-width="2" fill="none" marker-end="url(#b)"/>
+  <text x="148" y="320" font-size="12" fill="#555">corriente</text>
+  <!-- heat arrows -->
+  <path d="M120 82 V250" stroke="#b4441c" stroke-width="2.5" fill="none" marker-end="url(#a)"/>
+  <text x="112" y="150" text-anchor="end" font-size="13" fill="#b4441c">el calor se</text>
+  <text x="112" y="167" text-anchor="end" font-size="13" fill="#b4441c">"bombea"</text>
+  <text x="112" y="184" text-anchor="end" font-size="13" fill="#b4441c">hacia abajo</text>
+  <text x="525" y="140" font-size="13" fill="#555">si se invierte</text>
+  <text x="525" y="157" font-size="13" fill="#555">la corriente,</text>
+  <text x="525" y="174" font-size="13" fill="#555">se invierte</text>
+  <text x="525" y="191" font-size="13" fill="#555">el lado frío</text>
+  <text x="350" y="40" text-anchor="middle" font-size="15" fill="#222" font-weight="600">Una celda Peltier: pares de semiconductores N y P en serie</text>
+</svg>
